@@ -1,5 +1,7 @@
 #include <Springhead.h>
 #include <GL/glut.h>
+#include <sstream>
+#include <fstream>
 using namespace Spr;
 
 double	CameraRotX = 0.0, CameraRotY = Rad(90.0), CameraZoom = 2.0;
@@ -317,9 +319,7 @@ void initSupport(){
 		//	DSTR << std::endl;
 	}
 }
-void placeMirror(){
-	
-}
+
 
 struct Loop: public std::vector<Vec3d>{
 };
@@ -337,32 +337,64 @@ void placeSupport(){
 		af.Ex() -= af.Ex()*af.Ez() * af.Ez();
 		af.Ex().unitize();
 		af.Ey() = af.Ez() ^ af.Ex();
+		Vec2d disp[] = {Vec2d(0.19, 0.165), Vec2d(0.19+0.214, 0.165), Vec2d(0.19, 0.165+0.165), Vec2d(0.19+0.214, 0.165+0.165)};
 		if (x%2){
 			af = af * Affined::Rot(Rad(180), 'z');
 			af.Pos() = support.vPlane[x].vertices.back();
-			af = af * Affined::Trn(-0.043,0.16,x/2*0.1);
+			af = af * Affined::Trn(-0.043-disp[x/2].x,0.16-disp[x/2].y, 0);
 		}else{
 			af.Pos() = support.vPlane[x].vertices.front();
-			af = af * Affined::Trn(0,0,x/2*0.1);
+			af = af * Affined::Trn(-disp[x/2].x, -disp[x/2].y, 0);
 		}
 		af = af.inv();
 		sheets.back().loops.push_back(Loop());
 		for(unsigned i=0; i<support.vPlane[x].vertices.size(); ++i) 
 			sheets.back().loops.back().push_back(af * support.vPlane[x].vertices[i]);
 	}
+	double disp = 0;
 	for(int y=0; y<DIVY; ++y){
 		Affined af;
 		af.Ez() = support.hPlane[y].normal;
-		af.Ex() = support.hPlane[y].vertices[0] - support.hPlane[y].vertices[1];
+		af.Ex() = support.hPlane[y].vertices[0] - support.hPlane[y].vertices[DIVX*2-1];
 		af.Ex() -= af.Ex()*af.Ez() * af.Ez();
 		af.Ex().unitize();
 		af.Ey() = af.Ez() ^ af.Ex();
+		af.Pos() = support.hPlane[y].vertices[0];
+		double interval[] = {0.005, 0.03, 0.035, 0.03, 0.03, 0.03};
+		disp += interval[y];
+		af = af * Affined::Trn(-0.254, -disp-0.33, 0);
+		af = af.inv();
 		sheets.back().loops.push_back(Loop());
-		for(int i=0; i<support.hPlane[y].vertices.size(); ++i) 
+		for(unsigned i=0; i<support.hPlane[y].vertices.size(); ++i) 
 			sheets.back().loops.back().push_back(af * support.hPlane[y].vertices[i]);
 	}
 
 }
+void placeMirror(){
+	sheets.push_back(Sheet());
+	for(int y=0; y<DIVY; ++y){
+		for(int x=0; x<DIVX; ++x){
+			Affined af;
+			af.Ez() = cell[y][x].mirror.normal;
+			af.Ex() = cell[y][x].mirror.vertex[1] - cell[y][x].mirror.vertex[0];
+			af.Ex() -= af.Ex()*af.Ez() * af.Ez();
+			af.Ex().unitize();
+			af.Ey() = af.Ez() ^ af.Ex();
+			af.Pos() = cell[y][x].mirror.vertex[0];
+			af = af * Affined::Trn(x*0.037 -0.27, y*0.045 -0.26, 0);
+			af = af.inv();
+			sheets.back().loops.push_back(Loop());
+			for(int i=0; i<2; ++i){
+				sheets.back().loops.back().push_back(af * cell[y][x].mirror.vertex[i]);
+			}
+			for(int i=3; i>=2; --i){
+				sheets.back().loops.back().push_back(af * cell[y][x].mirror.vertex[i]);
+			}
+		}
+	}
+}
+
+
 bool showSheets = true;
 
 void display(){
@@ -377,26 +409,34 @@ void display(){
 	glLoadMatrixf(view.inv());
 	glClearColor(0,0,0,1);
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-
+	
 
 	if (showSheets){
 		glDisable(GL_LIGHTING);
-		for(int i=0; i<sheets.size(); ++i){
-			for(int j=0; j<sheets[i].loops.size(); ++j){
+		for(unsigned i=0; i<sheets.size(); ++i){
+			glColor3d((i+1)&1?1:0, (i+1)&2?1:0 , (i+1)&4?1:0);
+			for(unsigned j=0; j<sheets[i].loops.size(); ++j){
 				glBegin(GL_LINE_LOOP);
-				for(int v=0; v<sheets[i].loops[j].size(); ++v){
+				for(unsigned v=0; v<sheets[i].loops[j].size(); ++v){
 					glVertex3dv(sheets[i].loops[j][v]);
 				}
 				glEnd();
 			}
 		}
+		glBegin(GL_LINES);
+		glColor3d(1,0,0);
+		glVertex3d(-1, 0, 0);
+		glVertex3d(1, 0, 0);
+		glColor3d(0,1,0);
+		glVertex3d(0, -1, 0);
+		glVertex3d(0, 1, 0);
+		glEnd();
+
 		glEnable(GL_LIGHTING);
 	}else{
 		Affinef af;
 		af.Pos() = -Affined::Rot(env.projectionPitch, 'x') * Vec3d(0,0,env.d);
 		glMultMatrixf(af);
-
-
 
 		glDisable(GL_LIGHTING);
 		glBegin(GL_LINES);
@@ -472,6 +512,27 @@ void display(){
 	glutSwapBuffers();
 }
 
+void writeDxf(){
+	for(unsigned i=0; i<sheets.size(); ++i){
+		std::ostringstream oss;
+		oss << "sheet" << i << ".ps";
+		std::ofstream of(oss.str().c_str());
+		of << "/m { 2834.646 mul } def" << std::endl;	//	mm‚Ì’è‹`
+		for(unsigned j=0; j<sheets[i].loops.size(); ++j){
+			of << "newpath" << std::endl;
+			of << sheets[i].loops[j][sheets[i].loops[j].size()-1].x << " m " 
+				<< sheets[i].loops[j][sheets[i].loops[j].size()-1].y << " m "
+				<< "moveto" << std::endl;
+			for(unsigned k=0; k<sheets[i].loops[j].size(); ++k){
+				of << sheets[i].loops[j][k].x << " m " 
+					<< sheets[i].loops[j][k].y << " m " << "lineto" << std::endl;
+			}
+			of << "stroke" << std::endl;
+		}
+		of << "showpage" << std::endl;
+	}
+}
+
 
 int main(int argc, char* argv[]){
 	env.Init();
@@ -479,6 +540,7 @@ int main(int argc, char* argv[]){
 	initSupport();
 	placeMirror();
 	placeSupport();
+	writeDxf();
 
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
