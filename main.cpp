@@ -1,10 +1,13 @@
 #include <Springhead.h>
+#ifdef USE_GLEW
+#include <GL/glew.h>
+#endif
 #include <GL/glut.h>
 #include <sstream>
 #include <fstream>
 using namespace Spr;
 
-double	CameraRotX = 0.0, CameraRotY = Rad(90.0), CameraZoom = 2.0;
+double	CameraRotX = Rad(-90.0), CameraRotY = Rad(90.0), CameraZoom = 2.0;
 bool bLeftButton = false, bRightButton = false;
 int xlast, ylast;
 void __cdecl mouse(int button, int state, int x, int y){
@@ -30,7 +33,7 @@ void __cdecl motion(int x, int y){
 		CameraRotY += xrel * 0.01;
 		CameraRotY = Spr::max(Rad(-180.0), Spr::min(CameraRotY, Rad(180.0)));
 		CameraRotX += yrel * 0.01;
-		CameraRotX = Spr::max(Rad(-80.0), Spr::min(CameraRotX, Rad(80.0)));
+		CameraRotX = Spr::max(Rad(-90.0), Spr::min(CameraRotX, Rad(90.0)));
 	}
 	// 右ボタン
 	if(bRightButton){
@@ -53,7 +56,6 @@ static GLfloat mat_specular[]   = { 1.0, 1.0, 1.0, 1.0 };
 static GLfloat mat_shininess[]  = { 120.0 };
 
 
-
 void setLight() {
 	glLightfv(GL_LIGHT0, GL_POSITION, light_position);
 	glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
@@ -63,24 +65,17 @@ void setLight() {
 	glEnable(GL_LIGHT0);
 }
 
-void initialize(){
-	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_NORMALIZE);
-	setLight();
-}
-
+Vec2d windowSize;
 void reshape(int w, int h){
-	glViewport(0, 0, w, h);
+	windowSize.x = w;
+	windowSize.y = h;
+	glViewport(0, 0, windowSize.x, windowSize.y);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	gluPerspective(60.0, (GLfloat)w/(GLfloat)h, 0.01, 50.0);
 	glMatrixMode(GL_MODELVIEW);
 }
 
-void keyboard(unsigned char key, int x, int y){
-	if (key == 0x1b) exit(0);
-	if (key == 'q') exit(0);
-}	
 #define DIVX	8
 #define DIVY	6
 struct Env{
@@ -95,13 +90,14 @@ struct Env{
 	double t;			//	サポートの板厚
 	double hSupportDepth;
 	double hSupportGroove;
+	Affined world;
 	void Init(){
 		outXRad[0] = Rad(75);
 		outXRad[1] = Rad(-75);
-		outY[0] = 1.5;
-		outY[1] = -6.0;
+		outY[0] = 1;		//	31m だから、片側 13m と考える
+		outY[1] = -12.0;		//	
 		ceil = 4.5-0.9;	//	机の高さが90cm?
-		wall = 5;
+		wall = 4.6;		//	幅13mだが、天井付近は細くなっているので、9mと見た
 		d = 1.2;
 		hOff = 0.05;
 		h = 0.53 - hOff;
@@ -111,11 +107,14 @@ struct Env{
 		d *= mul;	hOff *= mul;	h *= mul;
 		w *= mul;
 		
-		hSupportDepth = 0.02;		//	hSupportの長さは2cm
+		hSupportDepth = 0.0192;		//	hSupportの長さは2cm
 		hSupportGroove = 0.003;		//	hSupport側の溝 3mm
-		t = 0.002;
+		t = 0.002 - 0.001*0.06;
+//		world.Pos() = Vec3d(0,0,-outY[1]+2);
+//		world = Affined::Rot(Rad(180), 'y') * world;
 	}
 } env;
+
 struct Mirror{
 	Vec3d normal;		//	鏡の法線
 	Vec3d vertex[4];	//	頂点
@@ -127,21 +126,54 @@ struct Cell{
 	Vec3d outDirCenter;
 	Vec3d inDir[4];
 	Vec3d outDir[4];
+	Vec3d outPosCenter;
+	Vec3d outPos[4];
+	Vec3d imagePos[4];
+	int outPlace;	//	-1: 左の壁, 0:天井, 1:右の壁
 	Mirror mirror;
+	//	最初のレンダリング用のカメラ
+	Affined view;
+	Affined projection;
+	Vec3d screenCenter;
+	Vec2d screenSize;
+	Vec3d localScreen[4];
+	Vec3d localOutPos[4];
+	Vec2d texCoord[4];
+	//	レンダリングバッファ
+	GLuint  texName;
+#ifdef USE_GLEW
+	GLuint  renderName;
+	GLuint  frameName;
+#endif
+	int		texWidth, texHeight;
+
 	void Init(int xIn, int yIn){
+		texWidth = 256;
+		texHeight = 256;
+		double ySum = 0;
+		double yInterval[DIVY];
+		double yPos[DIVY+1];
+		for(int y=0; y<DIVY; ++y){
+			if (y==0) yInterval[y] = 0.7;
+			else yInterval[y] = pow(0.7, y);
+			ySum += yInterval[y];
+		}
+		for(int y=0; y<DIVY; ++y) yInterval[y] /= ySum;
+		yPos[0] = 0;
+		for(int y=0; y<DIVY; ++y) yPos[y+1] = yPos[y] + yInterval[y];
 		//	プロジェクタが原点。上がy、プロジェクタから出る光の向きがz、プロジェクタに向かって右がx
 		//	inDirの計算：プロジェクタの仕様と分割数で決まる
 		x = xIn;
 		y = yIn;
 		for(int i=0; i<4; ++i){
 			inDir[i].x = -env.w/2 + (env.w/DIVX) * (x+i%2);
-			inDir[i].y = env.hOff + (env.h/DIVY) * (y+i/2);
+			inDir[i].y = env.hOff + env.h * yPos[y+i/2];
 			inDir[i].z = env.d;
-			inDir[i].unitize();
 		}
-		inDirCenter.x = -env.w/2 + (env.w/DIVX) * (x+0.5);
-		inDirCenter.y = env.hOff + (env.h/DIVY) * (y+0.5);
+		inDirCenter.x = (inDir[0].x+inDir[1].x) / 2;	//-env.w/2 + (env.w/DIVX) * (x+0.5);
+		inDirCenter.y = (inDir[0].y+inDir[2].y) / 2; //env.hOff + env.h * (yPos[y]+yPos[y+1])/2;
 		inDirCenter.z = env.d;
+		for(int i=0; i<4; ++i) inDir[i].unitize();
 		inDirCenter.unitize();
 
 		//	全体をx軸回転
@@ -183,13 +215,128 @@ struct Cell{
 			mirror.vertex[i] = mirrorOff / (inDir[i] * mirror.normal) * inDir[i];
 		}
 		mirror.center = mirrorOff / (inDirCenter * mirror.normal) * inDirCenter;
+		
+		for(int i=0; i<4; ++i){
+			Vec3d oc = outDir[i];
+			double ceilDist = env.ceil - mirror.vertex[i].y;
+			oc *= ceilDist / oc.y;
+			double wallLeft = -env.wall - mirror.vertex[i].x;
+			double wallRight = env.wall - mirror.vertex[i].x;
+			if (oc.x > wallRight) oc *= wallRight/oc.x;
+			if (oc.x < wallLeft) oc *= wallLeft/oc.x;
+			outPos[i] = mirror.vertex[i] + oc;
+		}
+		Vec3d oc = outDirCenter;
+		double ceilDist = env.ceil - mirror.center.y;
+		oc *= ceilDist / oc.y;
+		double wallLeft = -env.wall - mirror.center.x;
+		double wallRight = env.wall - mirror.center.x;
+		if (oc.x > wallRight){
+			oc *= wallRight/oc.x;
+			outPlace = 1;
+		}else if (oc.x < wallLeft){
+			oc *= wallLeft/oc.x;
+			outPlace = -1;
+		}else{
+			outPlace = 0;
+		}
+		outPosCenter = mirror.center + oc;
+		//	imagePos
+		for(int i=0; i<4; ++i){
+			imagePos[i] = outPos[i] - (2*mirror.normal*(outPos[i] - mirror.center)) * mirror.normal;
+		}
 	}
-	Vec3d OutPos(int id){
-		Vec3d oc = outDir[id];
-		oc *= env.ceil / oc.y;
-		if (oc.x > env.wall) oc *= env.wall/oc.x;
-		if (oc.x < -env.wall) oc *= -env.wall/oc.x;
-		return mirror.vertex[id] + oc;
+	void InitCamera(){
+//		view.Pos() = Vec3d(0,0,outPosCenter.z);
+		view = env.world.inv();
+		if (outPlace){	//	壁だったら
+			view.LookAtGL(Vec3d(outPlace*env.wall, 0, view.Pos().z), Vec3d(0, 1, 0));
+		}else{
+			view.LookAtGL(Vec3d(0, env.ceil, view.Pos().z), Vec3d(0, 0, 1));
+		}
+		for(int i=0; i<4; ++i) localOutPos[i] = view.inv() * outPos[i];
+		Vec3d localOutPosU[4];
+		for(int i=0; i<4; ++i) localOutPosU[i] = localOutPos[i] / -localOutPos[i].z;
+
+		Vec2d limit[2] = {Vec2d(DBL_MAX, DBL_MAX), Vec2d(-DBL_MAX, -DBL_MAX)};
+		for(int i=0; i<4; ++i){
+			if (localOutPosU[i].x < limit[0].x) limit[0].x = localOutPosU[i].x;
+			if (localOutPosU[i].x > limit[1].x) limit[1].x = localOutPosU[i].x;
+			if (localOutPosU[i].y < limit[0].y) limit[0].y = localOutPosU[i].y;
+			if (localOutPosU[i].y > limit[1].y) limit[1].y = localOutPosU[i].y;
+		}
+		screenCenter.x = (limit[0].x + limit[1].x)/2;
+		screenCenter.y = (limit[0].y + limit[1].y)/2;
+		screenCenter.z = 1;
+		screenSize.x = limit[1].x - limit[0].x;
+		screenSize.y = limit[1].y - limit[0].y;
+		for(int i=0; i<4; ++i){
+			texCoord[i].x = (localOutPosU[i].x - limit[0].x) / screenSize.x;
+			texCoord[i].y = (localOutPosU[i].y - limit[0].y) / screenSize.y;
+		}
+		projection = Affined::ProjectionGL(screenCenter, screenSize, 1, 10000);
+		localScreen[0] = Vec3d(limit[0].x, limit[0].y, -1);
+		localScreen[1] = Vec3d(limit[1].x, limit[0].y, -1);
+		localScreen[2] = Vec3d(limit[1].x, limit[1].y, -1);
+		localScreen[3] = Vec3d(limit[0].x, limit[1].y, -1);
+		Vec3d localNormal = ((localOutPos[2]-localOutPos[0]) ^ (localOutPos[1]-localOutPos[0])).unit();
+		for(int i=0; i<4; ++i){
+			//	k * localScreen[i] * localNormal = localOutPos[0] * localNormal;
+			localScreen[i] *= (localOutPos[0] * localNormal) / (localScreen[i] * localNormal);
+		}
+	}
+	void InitGL(){
+		//	texBuf
+		glPixelStorei( GL_UNPACK_ALIGNMENT, 1 );
+		glGenTextures( 1, &texName);
+		glBindTexture( GL_TEXTURE_2D, texName );
+		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
+		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
+		glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL );
+		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+		unsigned char tmp[256][256][4];
+/*		for(int x=0; x<256; ++x){
+			for(int y=0; y<256; ++y){
+				tmp[x][y][0] = x;
+				tmp[x][y][1] = y;
+				tmp[x][y][2] = 3;
+				tmp[x][y][3] = 255;
+			}
+		}
+*/		
+		glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, texWidth, texHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, tmp);
+#ifdef USE_GLEW
+		//	render(depth)Buf	
+		glGenRenderbuffersEXT(1, &renderName);
+		glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, renderName);
+		glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT, GL_DEPTH_COMPONENT, texWidth, texHeight);		
+		//	freame buf
+		glGenFramebuffersEXT(1, &frameName);
+		glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, frameName);
+		glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, texName, 0);
+		glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_RENDERBUFFER_EXT, renderName);
+		glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);	
+#endif
+	}
+	void BeforeDraw(){
+		glViewport(0, 0, texWidth, texHeight);
+		glClearColor(0,0,0,1);
+		glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+		glMatrixMode(GL_PROJECTION);
+		glLoadMatrixd(projection);
+		glMatrixMode(GL_MODELVIEW);
+		glLoadMatrixd(view.inv());
+	}
+	void AfterDraw(){
+		glFlush();
+		glBindTexture(GL_TEXTURE_2D, texName);
+		glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, texWidth,  texHeight);
+	}
+	void DrawList(GLuint ct){
+		BeforeDraw();
+		glCallList(ct);
+		AfterDraw();
 	}
 };
 Cell cell[DIVY][DIVX];
@@ -221,6 +368,11 @@ void initMirror(){
 			cell[y][DIVX/2+i].CalcPosition(cell[y][DIVX/2+i-1].mirror.vertex[1].z, 0);
 		}
 		depth = cell[y][DIVX/2].mirror.vertex[2].z;
+	}
+	for(int y=0; y<DIVY; ++y){
+		for(int x=0; x<DIVX; ++x){
+			cell[y][x].InitCamera();
+		}
 	}
 }
 void initSupport(){
@@ -360,7 +512,7 @@ void placeSupport(){
 		af.Ex().unitize();
 		af.Ey() = af.Ez() ^ af.Ex();
 		af.Pos() = support.hPlane[y].vertices[0];
-		double interval[] = {0.005, 0.03, 0.035, 0.03, 0.03, 0.03};
+		double interval[] = {0.003, 0.039, 0.038, 0.031, 0.027, 0.025};
 		disp += interval[y];
 		af = af * Affined::Trn(-0.254, -disp-0.33, 0);
 		af = af.inv();
@@ -372,7 +524,13 @@ void placeSupport(){
 }
 void placeMirror(){
 	sheets.push_back(Sheet());
+	double yPos = 0;
 	for(int y=0; y<DIVY; ++y){
+		double lenMax=0;
+		for(int x=0; x<DIVX; ++x){
+			lenMax = std::max(lenMax, (cell[y][x].mirror.vertex[2] - cell[y][x].mirror.vertex[0]).norm());
+		}
+		yPos += lenMax + 0.002;
 		for(int x=0; x<DIVX; ++x){
 			Affined af;
 			af.Ez() = cell[y][x].mirror.normal;
@@ -381,7 +539,7 @@ void placeMirror(){
 			af.Ex().unitize();
 			af.Ey() = af.Ez() ^ af.Ex();
 			af.Pos() = cell[y][x].mirror.vertex[0];
-			af = af * Affined::Trn(x*0.037 -0.27, y*0.045 -0.26, 0);
+			af = af * Affined::Trn(x*0.037 -0.27, -yPos, 0);
 			af = af.inv();
 			sheets.back().loops.push_back(Loop());
 			for(int i=0; i<2; ++i){
@@ -394,31 +552,130 @@ void placeMirror(){
 	}
 }
 
+GLuint contents;
 
-bool showSheets = true;
+void initialize(){
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_NORMALIZE);
+	setLight();
+	for(int y=0; y<DIVY; ++y){
+		for(int x=0; x<DIVX; ++x){
+			cell[y][x].InitGL();
+		}
+	}
+	contents = glGenLists(1);
+}
 
+
+enum DrawMode{
+	DM_DESIGN,
+	DM_SHEET,
+	DM_MIRROR
+} drawMode = DM_DESIGN;
+
+void keyboard(unsigned char key, int x, int y){
+	if (key == 's') drawMode = DM_SHEET;
+	if (key == 'd') drawMode = DM_DESIGN;
+	if (key == 'm') drawMode = DM_MIRROR;
+
+	if (key == 0x1b) exit(0);
+	if (key == 'q') exit(0);
+	glutPostRedisplay();
+}	
+
+void drawContents(){
+	glNewList(contents, GL_COMPILE);
+	glDisable(GL_LIGHTING);
+	glLineWidth(5);
+#if 0
+	glBegin(GL_LINE_LOOP);
+	for(int i=0; i<400; ++i){
+		Vec3d rp(rand(), rand(), rand());
+		rp /= RAND_MAX/2;
+		glColor3dv(rp*2);
+		rp -= Vec3d(1, 1, 1);
+		rp *= 50;
+		glVertex3dv(rp);
+	}
+	glEnd();
+#else
+//	glMultMatrixd(Affined::Rot(Rad(90), 'z'));
+	glBegin(GL_LINES);
+	int Y = 15;
+	int SIZE = 40;
+	for(int i=-SIZE; i<SIZE; ++i){
+		glLineWidth(i%2 ? 5 : 2);
+		glColor3d((i+SIZE)%3/3.0,1,0);
+		glVertex3d(i, Y, -SIZE);
+		glVertex3d(i, Y,  SIZE);
+		glColor3d(1,0,(i+SIZE)%3/3.0);
+		glVertex3d(-SIZE, Y, i);
+		glVertex3d( SIZE, Y, i);
+	}
+/*	Y=-Y;
+	for(int i=-SIZE; i<SIZE; ++i){
+		glLineWidth(i%2 ? 5 : 2);
+		glColor3d((i+SIZE)%3/3.0,1,0);
+		glVertex3d(i, Y, -SIZE);
+		glVertex3d(i, Y,  SIZE);
+		glColor3d(1,0,(i+SIZE)%3/3.0);
+		glVertex3d(-SIZE, Y, i);
+		glVertex3d( SIZE, Y, i);
+	}
+*/	glEnd();
+#endif
+	glLineWidth(1);
+	glEnable(GL_LIGHTING);
+//	glTranslated(0, 20, 0);
+//	glutSolidTeapot(4);
+	glEndList();
+}
+
+static Affined afMove;
 void display(){
+	glutPostRedisplay();
+	glMatrixMode(GL_PROJECTION);
+	glPushMatrix();
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
+	afMove = Affined::Rot(Rad(0.3), 'y') * afMove;
+	for(int y=0; y<DIVY; ++y){
+		for(int x=0; x<DIVX; ++x){
+			cell[y][x].BeforeDraw();
+			glMultMatrixd(afMove);
+			glCallList(contents);
+			cell[y][x].AfterDraw();
+		}
+	}
+	glMatrixMode(GL_PROJECTION);
+	glPopMatrix();
+	glMatrixMode(GL_MODELVIEW);
+	glPopMatrix();
+	glViewport(0, 0, windowSize.x, windowSize.y);
+
 	Affinef view;
 	view.Pos() = CameraZoom * Vec3f(
 		cos(CameraRotX) * cos(CameraRotY),
 		sin(CameraRotX),
 		cos(CameraRotX) * sin(CameraRotY));
 	view.LookAtGL(Vec3f(0.0, 0.0, 0.0), Vec3f(0.0f, 100.0f, 0.0f));
-
 	glMatrixMode(GL_MODELVIEW);
 	glLoadMatrixf(view.inv());
+	glMultMatrixd(env.world);
 	glClearColor(0,0,0,1);
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-	
-
-	if (showSheets){
+	if (drawMode == DM_SHEET){
 		glDisable(GL_LIGHTING);
 		for(unsigned i=0; i<sheets.size(); ++i){
-			glColor3d((i+1)&1?1:0, (i+1)&2?1:0 , (i+1)&4?1:0);
+			glColor3d(1,1,1);
 			for(unsigned j=0; j<sheets[i].loops.size(); ++j){
 				glBegin(GL_LINE_LOOP);
 				for(unsigned v=0; v<sheets[i].loops[j].size(); ++v){
-					glVertex3dv(sheets[i].loops[j][v]);
+					if (i==0){
+						glVertex3dv(sheets[i].loops[j][v]);
+					}else{
+						glVertex3dv(Affined::Rot(Rad(180), 'y') * sheets[i].loops[j][v]);						
+					}
 				}
 				glEnd();
 			}
@@ -433,7 +690,36 @@ void display(){
 		glEnd();
 
 		glEnable(GL_LIGHTING);
-	}else{
+	}
+	if (drawMode == DM_MIRROR){
+		glMatrixMode(GL_PROJECTION);
+		Vec3d screen(0, env.hOff + env.h/2, env.d);
+		Vec2d size(env.w, env.h);
+		Affined projection = Affined::ProjectionGL(screen, size);
+		glLoadMatrixd(projection);
+		glMatrixMode(GL_MODELVIEW);
+		Affined view;
+		view.LookAtGL(Vec3d(0, 0, 1), Vec3d(0,1,0));
+		view = view * Affined::Rot(-env.projectionPitch, 'x');
+		glLoadMatrixd(view.inv());
+		glDisable(GL_LIGHTING);
+		glEnable(GL_TEXTURE_2D);
+		for(int y=0; y<DIVY; ++y){
+			for(int x=0; x<DIVX	; ++x){
+				//	表示位置の虚像の表示
+				glBindTexture(GL_TEXTURE_2D, cell[y][x].texName);
+				glBegin(GL_TRIANGLE_STRIP);
+				for(int i=0; i<4; ++i){
+					glTexCoord2dv(cell[y][x].texCoord[i]);
+					glVertex3dv(cell[y][x].imagePos[i]);
+				}
+				glEnd();
+			}
+		}
+		glDisable(GL_TEXTURE_2D);
+		glEnable(GL_LIGHTING);
+	}
+	if (drawMode == DM_DESIGN){
 		Affinef af;
 		af.Pos() = -Affined::Rot(env.projectionPitch, 'x') * Vec3d(0,0,env.d);
 		glMultMatrixf(af);
@@ -452,43 +738,56 @@ void display(){
 
 		for(int y=0; y<DIVY; ++y){
 			for(int x=0; x<DIVX	; ++x){
-				Vec3d mirrorCenter;
-				for(int i=0; i<4; ++i) mirrorCenter += cell[y][x].mirror.vertex[i];
-				mirrorCenter /= 4;
+				//	鏡の描画
+				//	鏡本体の描画
+				glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, Vec4f((float)y/DIVY, (float)x/DIVX, 0, 1));
+				glBegin(GL_LINE_LOOP);
+				glNormal3dv(cell[y][x].mirror.normal);
+				glVertex3dv(cell[y][x].mirror.vertex[0]);
+				glVertex3dv(cell[y][x].mirror.vertex[1]);
+				glVertex3dv(cell[y][x].mirror.vertex[3]);
+				glVertex3dv(cell[y][x].mirror.vertex[2]);
+				glEnd();
+
+				//	鏡と表示位置の中心
 				glDisable(GL_LIGHTING);
-				glColor3dv(Vec3d((float)y/DIVY, (float)x/DIVX, 0.5));
+				glColor3dv(Vec3d((float)y/DIVY, (float)x/DIVX, 1.0));
 				glPointSize(4);
 				glBegin(GL_POINTS);
-				glVertex3dv(mirrorCenter);
-				Vec3d oc = cell[y][x].outDirCenter;
-				oc *= env.ceil / oc.y;
-				if (oc.x > env.wall) oc *= env.wall/oc.x;
-				if (oc.x < -env.wall) oc *= -env.wall/oc.x;
-				glVertex3dv(mirrorCenter + oc);
+				glVertex3dv(cell[y][x].mirror.center);
+				glVertex3dv(cell[y][x].outPosCenter);
 				glEnd();
-				glColor3dv(Vec3d((float)y/DIVY, (float)x/DIVX, 0.5) * 0.5);
-				glBegin(GL_TRIANGLE_STRIP);
-				for(int i=0; i<4; ++i) glVertex3dv(cell[y][x].OutPos(i));
+				//	鏡から、表示位置までの光線
+				glColor3dv(Vec3d((float)y/DIVY, (float)x/DIVX, 0.5));
+				glBegin(GL_LINES);
+				glVertex3dv(cell[y][x].mirror.center);
+				glVertex3dv(cell[y][x].outPosCenter);
 				glEnd();
 				
-				glBegin(GL_LINES);
-				glVertex3dv(mirrorCenter);
-				glVertex3dv(mirrorCenter + oc);
-				glEnd();
-
-				glColor3dv(Vec3d(1,1,1));
-				glBegin(GL_POINTS);
-				glVertex3dv(cell[y][x].inDirCenter);
-				glEnd();
-				glEnable(GL_LIGHTING);
-
-				glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, Vec4f((float)y/DIVY, (float)x/DIVX, 0, 1));
+				//	表示位置の描画
+				glEnable(GL_TEXTURE_2D);
+				glBindTexture(GL_TEXTURE_2D, cell[y][x].texName);
 				glBegin(GL_TRIANGLE_STRIP);
 				for(int i=0; i<4; ++i){
-					glNormal3dv(cell[y][x].mirror.normal);
-					glVertex3dv(cell[y][x].mirror.vertex[i]);
+					glTexCoord2dv(cell[y][x].texCoord[i]);
+					glVertex3dv(cell[y][x].outPos[i]);
 				}
 				glEnd();
+				//	表示位置の虚像の表示
+				glBegin(GL_TRIANGLE_STRIP);
+				for(int i=0; i<4; ++i){
+					glTexCoord2dv(cell[y][x].texCoord[i]);
+					glVertex3dv(cell[y][x].imagePos[i]);
+				}
+				glEnd();
+
+				glDisable(GL_TEXTURE_2D);
+				//	OpenGLのカメラの描画域の表示
+				glBegin(GL_LINE_LOOP);
+				for(int i=0; i<4; ++i) glVertex3dv(cell[y][x].view * cell[y][x].localScreen[i]);
+				glEnd();				
+
+				glEnable(GL_LIGHTING);
 			}
 		}	
 		//	supportの表示
@@ -500,32 +799,34 @@ void display(){
 				glVertex3dv(*it);
 			}
 			glEnd();
+		}
+		for(int y=0; y<DIVY; ++y){
 			glColor3dv(Vec3d(0,1,1));
 			glBegin(GL_LINE_LOOP);
-			for(std::vector<Vec3d>::iterator it = support.hPlane[x].vertices.begin(); it != support.hPlane[x].vertices.end(); ++it){
+			for(std::vector<Vec3d>::iterator it = support.hPlane[y].vertices.begin(); it != support.hPlane[y].vertices.end(); ++it){
 				glVertex3dv(*it);
 			}
 			glEnd();
-			glEnable(GL_LIGHTING);
 		}
+		glEnable(GL_LIGHTING);
 	}
 	glutSwapBuffers();
 }
 
-void writeDxf(){
+void writePs(){
 	for(unsigned i=0; i<sheets.size(); ++i){
 		std::ostringstream oss;
 		oss << "sheet" << i << ".ps";
 		std::ofstream of(oss.str().c_str());
-		of << "/m { 2834.646 mul } def" << std::endl;	//	mmの定義
+		double un = 2834.646;	//	単位変換 m/pt
 		for(unsigned j=0; j<sheets[i].loops.size(); ++j){
 			of << "newpath" << std::endl;
-			of << sheets[i].loops[j][sheets[i].loops[j].size()-1].x << " m " 
-				<< sheets[i].loops[j][sheets[i].loops[j].size()-1].y << " m "
+			of << sheets[i].loops[j][sheets[i].loops[j].size()-1].x*un << " " 
+				<< sheets[i].loops[j][sheets[i].loops[j].size()-1].y*un << " "
 				<< "moveto" << std::endl;
 			for(unsigned k=0; k<sheets[i].loops[j].size(); ++k){
-				of << sheets[i].loops[j][k].x << " m " 
-					<< sheets[i].loops[j][k].y << " m " << "lineto" << std::endl;
+				of << sheets[i].loops[j][k].x*un << " " 
+					<< sheets[i].loops[j][k].y*un << " " << "lineto" << std::endl;
 			}
 			of << "stroke" << std::endl;
 		}
@@ -540,12 +841,13 @@ int main(int argc, char* argv[]){
 	initSupport();
 	placeMirror();
 	placeSupport();
-	writeDxf();
+	writePs();
 
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
 	glutCreateWindow("mirror");
 	initialize();
+	drawContents();
 	glutDisplayFunc(display);
 	glutReshapeFunc(reshape);
 	glutKeyboardFunc(keyboard);
