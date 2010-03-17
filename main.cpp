@@ -129,6 +129,7 @@ struct Cell{
 	Vec3d outPosCenter;
 	Vec3d outPos[4];
 	Vec3d imagePos[4];
+	Vec3d inPos[4];
 	int outPlace;	//	-1: 左の壁, 0:天井, 1:右の壁
 	Mirror mirror;
 	//	最初のレンダリング用のカメラ
@@ -166,20 +167,21 @@ struct Cell{
 		x = xIn;
 		y = yIn;
 		for(int i=0; i<4; ++i){
-			inDir[i].x = -env.w/2 + (env.w/DIVX) * (x+i%2);
-			inDir[i].y = env.hOff + env.h * yPos[y+i/2];
-			inDir[i].z = env.d;
+			inPos[i].x = -env.w/2 + (env.w/DIVX) * (x+i%2);
+			inPos[i].y = env.hOff + env.h * yPos[y+i/2];
+			inPos[i].z = env.d;
 		}
-		inDirCenter.x = (inDir[0].x+inDir[1].x) / 2;	//-env.w/2 + (env.w/DIVX) * (x+0.5);
-		inDirCenter.y = (inDir[0].y+inDir[2].y) / 2; //env.hOff + env.h * (yPos[y]+yPos[y+1])/2;
+		inDirCenter.x = (inPos[0].x+inPos[1].x) / 2;	//-env.w/2 + (env.w/DIVX) * (x+0.5);
+		inDirCenter.y = (inPos[0].y+inPos[2].y) / 2; //env.hOff + env.h * (yPos[y]+yPos[y+1])/2;
 		inDirCenter.z = env.d;
-		for(int i=0; i<4; ++i) inDir[i].unitize();
+		for(int i=0; i<4; ++i) inDir[i] = inPos[i].unit();
 		inDirCenter.unitize();
 
 		//	全体をx軸回転
 		Quaterniond rot = Quaterniond::Rot(env.projectionPitch, 'x');
 		for(int i=0; i<4; ++i){
 			inDir[i] = rot * inDir[i];
+			inPos[i] = rot * inPos[i];
 		}
 		inDirCenter = rot * inDirCenter;		
 
@@ -576,7 +578,10 @@ enum DrawMode{
 void keyboard(unsigned char key, int x, int y){
 	if (key == 's') drawMode = DM_SHEET;
 	if (key == 'd') drawMode = DM_DESIGN;
-	if (key == 'm') drawMode = DM_MIRROR;
+	if (key == 'm') {
+		drawMode = DM_MIRROR;
+		glutFullScreen();
+	}
 
 	if (key == 0x1b) exit(0);
 	if (key == 'q') exit(0);
@@ -695,7 +700,7 @@ void display(){
 		glMatrixMode(GL_PROJECTION);
 		Vec3d screen(0, env.hOff + env.h/2, env.d);
 		Vec2d size(env.w, env.h);
-		Affined projection = Affined::ProjectionGL(screen, size);
+		Affined projection = Affined::ProjectionGL(screen, size, 0.1, 1000);
 		glLoadMatrixd(projection);
 		glMatrixMode(GL_MODELVIEW);
 		Affined view;
@@ -703,6 +708,20 @@ void display(){
 		view = view * Affined::Rot(-env.projectionPitch, 'x');
 		glLoadMatrixd(view.inv());
 		glDisable(GL_LIGHTING);
+		//	仕切りの線
+		glLineWidth(10);
+		glColor3d(0,0,0);
+		glBegin(GL_LINES);
+		for(int y=1; y<DIVY; ++y){
+			glVertex3dv(cell[y][0].inPos[0]);
+			glVertex3dv(cell[y][DIVX-1].inPos[1]);
+		}
+		for(int x=1; x<DIVX	; ++x){
+			glVertex3dv(cell[0][x].inPos[0]);
+			glVertex3dv(cell[DIVY-1][x].inPos[2]);
+		}
+		glEnd();
+		//	鏡に写すべき映像を並べる
 		glEnable(GL_TEXTURE_2D);
 		for(int y=0; y<DIVY; ++y){
 			for(int x=0; x<DIVX	; ++x){
