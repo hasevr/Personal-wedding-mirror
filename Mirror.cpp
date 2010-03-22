@@ -25,8 +25,7 @@ void Config::Init(){
 
 void Cell::Init(int xIn, int yIn){
 	Config& config = env.config;
-	texWidth = 256;
-	texHeight = 256;
+	texSize = 256;
 	double ySum = 0;
 	double yInterval[DIVY];
 	double yPos[DIVY+1];
@@ -196,17 +195,9 @@ void Cell::InitGL(){
 	glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL );
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
-	unsigned char tmp[256][256][4];
-/*		for(int x=0; x<256; ++x){
-		for(int y=0; y<256; ++y){
-			tmp[x][y][0] = x;
-			tmp[x][y][1] = y;
-			tmp[x][y][2] = 3;
-			tmp[x][y][3] = 255;
-		}
-	}
-*/		
-	glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, texWidth, texHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, tmp);
+	char* tmp = new char[texSize*texSize*4];
+	glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, texSize, texSize, 0, GL_RGBA, GL_UNSIGNED_BYTE, tmp);
+	delete tmp;
 #ifdef USE_GLEW
 	//	render(depth)Buf	
 	glGenRenderbuffersEXT(1, &renderName);
@@ -221,7 +212,7 @@ void Cell::InitGL(){
 #endif
 }
 void Cell::BeforeDrawTex(){
-	glViewport(0, 0, texWidth, texHeight);
+	glViewport(0, 0, texSize, texSize);
 	glClearColor(0,0,0,1);
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 	glMatrixMode(GL_PROJECTION);
@@ -232,7 +223,7 @@ void Cell::BeforeDrawTex(){
 void Cell::AfterDrawTex(){
 	glFlush();
 	glBindTexture(GL_TEXTURE_2D, texName);
-	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, texWidth,  texHeight);
+	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, texSize,  texSize);
 }
 void Cell::DrawListTex(GLuint ct){
 	BeforeDrawTex();

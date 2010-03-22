@@ -54,7 +54,7 @@ struct Cell{
 	GLuint  renderName;
 	GLuint  frameName;
 #endif
-	int		texWidth, texHeight;
+	int	texSize;
 
 	void Init(int xIn, int yIn);
 	void CalcPosition(double depth, int id);	//	’¸“_id ‚ªdepth‚É‚È‚é‚æ‚¤‚É‚·‚é
