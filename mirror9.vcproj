@@ -179,7 +179,23 @@
 	</References>
 	<Files>
 		<File
+			RelativePath=".\Env.cpp"
+			>
+		</File>
+		<File
+			RelativePath=".\Env.h"
+			>
+		</File>
+		<File
 			RelativePath=".\main.cpp"
+			>
+		</File>
+		<File
+			RelativePath=".\Mirror.cpp"
+			>
+		</File>
+		<File
+			RelativePath=".\Mirror.h"
 			>
 		</File>
 	</Files>
