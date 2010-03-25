@@ -179,6 +179,22 @@
 	</References>
 	<Files>
 		<File
+			RelativePath=".\Contents.cpp"
+			>
+		</File>
+		<File
+			RelativePath=".\Contents.h"
+			>
+		</File>
+		<File
+			RelativePath=".\Decal.cpp"
+			>
+		</File>
+		<File
+			RelativePath=".\Decal.h"
+			>
+		</File>
+		<File
 			RelativePath=".\Env.cpp"
 			>
 		</File>
