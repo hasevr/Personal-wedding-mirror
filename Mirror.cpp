@@ -1,6 +1,12 @@
 #include "Mirror.h"
 #include "Env.h"
 
+void Front::Init(){
+	w = 2;
+	h = 1.5;
+	d = 15.5;
+	hOff = 1;
+}
 void Config::Init(){
 	outXRad[0] = Rad(75);
 	outXRad[1] = Rad(-75);

@@ -7,10 +7,12 @@ struct Sheet{
 };
 struct Env{
 	Config config;
+	Front front;
 	Cell cell[DIVY][DIVX];
 	Support support;	
 	std::vector<Sheet> sheets;
-	Affined projPose;	//	Worldから見たプロジェクタの位置、姿勢(ただし、projectionPitch の回転は含めない)
+	Affined projPose;	//	Worldから見たミラー用プロジェクタの位置、姿勢(ただし、projectionPitch の回転は含めない)
+						//	frontには使わない
 	Vec3d centerSeat;
 
 	enum DrawMode{
@@ -19,6 +21,7 @@ struct Env{
 		DM_SHEET,
 		DM_MIRROR,
 		DM_FRONT,
+		DM_BACK,
 	};
 	DrawMode drawMode;
 
@@ -40,6 +43,7 @@ struct Env{
 	void DrawSheet();
 	void DrawMirror();
 	void DrawDesign();
-	void DrawWorld();
+	void DrawFront();
+	void DrawBack();
 };
 extern Env env;

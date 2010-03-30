@@ -2,6 +2,7 @@
 #define DECAL_H
 #include <string>
 #include <Base/Affine.h>
+#include <Base/TQuaternion.h>
 using namespace Spr;
 
 struct Decal{
@@ -12,12 +13,24 @@ struct Decal{
 	bool Load();
 	void Release();
 	void Draw();
+	double time;
+	Affined posture;
 };
 
 struct Decals:public std::vector<Decal>{
 	std::string folderName;
 	void Load();
 	void Release();
+};
+struct Key{
+	Posed posture;
+	double duration;
+	double transition;
+	Key();
+	Key(double d, double t, Posed p);
+};
+struct Path: public std::vector<Key>{
+	Posed GetPose(double time);
 };
 
 #endif

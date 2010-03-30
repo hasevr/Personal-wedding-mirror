@@ -7,6 +7,13 @@
 #define DIVY	6
 using namespace Spr;
 
+struct Front{
+	double w;
+	double h;
+	double hOff;
+	double d;
+	void Init();
+};
 struct Config{
 	double w;
 	double h;

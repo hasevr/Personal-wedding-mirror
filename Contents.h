@@ -12,6 +12,7 @@ struct Contents{
 	};
 	ContentsMode mode;
 	Decals decals;
+	std::vector<Path> paths;
 
 	unsigned cvTex;
 	unsigned list;
@@ -31,5 +32,6 @@ struct Contents{
 	void DrawCam();
 	void DrawTile();
 	void LoadPhoto();
+	void DrawShip();
 };
 extern Contents contents;

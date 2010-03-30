@@ -33,6 +33,22 @@ void Contents::DrawPhoto(){
 	}
 	decals.front().Draw();
 }
+
+double dt = 0.033;
+void Contents::DrawShip(){
+	static unsigned startCount=1;
+	if (startCount < decals.size() && decals[startCount-1].time > 3){
+		startCount++;
+	}
+	for(unsigned i=0; i< startCount; ++i){
+		decals[i].time += dt;
+		decals[i].posture = paths.back().GetPose(decals[i].time);
+	}
+	for(Decals::iterator it = decals.begin(); it != decals.end(); ++it){
+		it->Draw();
+	}
+}
+
 void Contents::DrawRandom(){
 	glBegin(GL_LINE_LOOP);
 	for(int i=0; i<400; ++i){
@@ -167,6 +183,9 @@ void Contents::Draw(bool isInit){
 		case CO_PHOTO:
 			DrawPhoto();
 			break;
+		case CO_SHIP:
+			DrawShip();
+			break;
 	}
 	glLineWidth(1);
 	glEnable(GL_LIGHTING);
@@ -174,6 +193,36 @@ void Contents::Draw(bool isInit){
 }
 
 void Contents::Init(){
+	//	パスの設定
+	paths.push_back(Path());
+	Vec3d frontDir(0, env.front.hOff + env.front.h/2, env.front.d);
+	frontDir.unitize();
+	Posed pose;
+	pose.Pos() = frontDir * 300;
+	paths.back().push_back(Key(0, 4, pose));
+	pose.Pos() = frontDir * 35;
+	paths.back().push_back(Key(0, 6, pose));
+	Affined af;
+	af.Pos() = frontDir * 10 + Vec3d(10, 0, 0);
+	af.LookAt(Vec3d(0, 0, 0), Vec3d(0,1,0));
+	paths.back().push_back(Key(0, 2, Posed(af)));
+	af.Pos() = Vec3d(10, 5, 0);
+	af.LookAt(Vec3d(0, 0, 0), Vec3d(0,1,0));
+	paths.back().push_back(Key(0, 2, Posed(af)));
+	af.Pos() = Vec3d(10, 5, -10);
+	af.LookAt(Vec3d(0, 0, 0), Vec3d(0,1,0));
+	paths.back().push_back(Key(0, 2, Posed(af)));
+
+	af.Pos() = Vec3d(0, 5, -10);
+	af.LookAt(Vec3d(0, 0, 0), Vec3d(0,1,0));
+	paths.back().push_back(Key(0, 2, Posed(af)));
+
+	af.Pos() = Vec3d(0, 5, -20);
+	af.LookAt(Vec3d(0, 0, 0), Vec3d(0,1,0));
+	paths.back().push_back(Key(0, 2, Posed(af)));
+
+
+	//	カメラ入力関係
 	cvCam = cvCreateCameraCapture(CV_CAP_ANY);       //カメラ初期化
 	if (cvCam) {
 		cvImg = cvQueryFrame(cvCam);
@@ -186,8 +235,6 @@ void Contents::Init(){
 	}else{
 		std::cout << "カメラが見つかりません" << std::endl;
 	}
-	
-	list = glGenLists(1);
 	glGenTextures( 1, &cvTex);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
@@ -195,6 +242,8 @@ void Contents::Init(){
 	glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL );
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
 
+	//	初期コンテンツの描画
+	list = glGenLists(1);
 	Draw(true);
 }
 void Contents::Release(){

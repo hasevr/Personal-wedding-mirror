@@ -17,11 +17,10 @@
 using namespace Spr;
 
 
-Vec2d windowSize;
-Vec2d orgSize;
 double	CameraRotX = Rad(-90.0), CameraRotY = Rad(90.0), CameraZoom = 2.0;
 bool bLeftButton = false, bRightButton = false;
 int xlast, ylast;
+Affinef mouseView;
 void __cdecl mouse(int button, int state, int x, int y){
 	xlast = x, ylast = y;
 	if(button == GLUT_LEFT_BUTTON)
@@ -52,46 +51,79 @@ void __cdecl motion(int x, int y){
 		CameraZoom *= exp(yrel/10.0);
 		CameraZoom = max(0.1, min(CameraZoom, 100.0));
 	}
+	mouseView.Pos() = CameraZoom * Vec3f(
+		cos(CameraRotX) * cos(CameraRotY),
+		sin(CameraRotX),
+		cos(CameraRotX) * sin(CameraRotY));
+	mouseView.LookAtGL(Vec3f(), Vec3f(0.0f, 100.0f, 0.0f));
+
 	glutPostRedisplay();
 }
 
 
-
+Vec2i windowSize;
 void reshape(int w, int h){
-	if (windowSize.x != w && windowSize.y != h) orgSize = windowSize;
 	windowSize.x = w;
 	windowSize.y = h;
-	glViewport(0, 0, windowSize.x, windowSize.y);
 }
 
-
+bool bFullScreen;
+Vec2i orgPos;
+Vec2i orgSize;
+void fullScreen(){
+	glutFullScreen();
+	bFullScreen = true;
+}
+void saveWindow(){
+	if (!bFullScreen && (orgSize.x != 1024 || orgSize.x != 1280)){
+		orgPos.x = glutGet(GLUT_WINDOW_X);
+		orgPos.y = glutGet(GLUT_WINDOW_Y);
+		orgSize.x = glutGet(GLUT_WINDOW_WIDTH);
+		orgSize.y = glutGet(GLUT_WINDOW_HEIGHT);
+	}
+}
+void loadWindow(){
+	if (bFullScreen){
+		glutPositionWindow(orgPos.x, orgPos.y);
+		glutReshapeWindow(orgSize.x, orgSize.y);
+		bFullScreen = false;
+	}
+}
 
 void keyboard(unsigned char key, int x, int y){
 	switch (key){
 		case '1':
 			env.drawMode = Env::DM_MIRROR;
-			glutFullScreen();
+			saveWindow();
+			fullScreen();
 			std::cout << "1 Draw mirror" << std::endl;
 			break;
 		case '2':
 			env.drawMode = Env::DM_FRONT;
-			glutFullScreen();
+			saveWindow();
+			fullScreen();
 			std::cout << "2 Draw front" << std::endl;
 			break;
 		case '3':
-			env.drawMode = Env::DM_WORLD;
-			glutReshapeWindow(orgSize.x, orgSize.y);
-			std::cout << "3 Draw world" << std::endl;
+			env.drawMode = Env::DM_BACK;
+			saveWindow();
+			fullScreen();
+			std::cout << "3 Draw back" << std::endl;
 			break;
 		case '4':
-			env.drawMode = Env::DM_DESIGN;
-			glutReshapeWindow(orgSize.x, orgSize.y);
-			std::cout << "4 Draw design" << std::endl;
+			env.drawMode = Env::DM_WORLD;
+			loadWindow();
+			std::cout << "4 Draw world" << std::endl;
 			break;
 		case '5':
+			env.drawMode = Env::DM_DESIGN;
+			loadWindow();
+			std::cout << "5 Draw design" << std::endl;
+			break;
+		case '6':
 			env.drawMode = Env::DM_SHEET;
-			glutReshapeWindow(orgSize.x, orgSize.y);
-			std::cout << "5 Draw sheet" << std::endl;
+			loadWindow();
+			std::cout << "6 Draw sheet" << std::endl;
 			break;
 
 		case 't':
@@ -128,6 +160,7 @@ void keyboard(unsigned char key, int x, int y){
 			break;
 		case 's':
 			contents.mode = Contents::CO_SHIP;
+			contents.LoadPhoto();
 			std::cout << "s Contents=ship" << std::endl;
 			break;
 		case 0x1b:
@@ -154,28 +187,12 @@ void display(){
 			glCallList(contents.list);
 			env.cell[y][x].AfterDrawTex();
 		}
-	}
-	
+	}	
 	//	メインのレンダリング
-	glViewport(0, 0, windowSize.x, windowSize.y);
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	gluPerspective(60.0, (GLfloat)windowSize.x/(GLfloat)windowSize.y, 0.01, 50.0);
-	glMatrixMode(GL_MODELVIEW);
-	
-	//	マウス操作による視点の設定
-	Affinef view;
-	view.Pos() = CameraZoom * Vec3f(
-		cos(CameraRotX) * cos(CameraRotY),
-		sin(CameraRotX),
-		cos(CameraRotX) * sin(CameraRotY));
-	view.LookAtGL(Vec3f(), Vec3f(0.0f, 100.0f, 0.0f));
+	glViewport(0, 0, windowSize.x, windowSize.y);	//	ビューポートをWindow全体に
 
-	glMatrixMode(GL_MODELVIEW);
-	glLoadMatrixf(view.inv());
 	glClearColor(0,0,0,1);
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-
 	//	表示モードにあわせて表示
 	env.Draw();
 	glutSwapBuffers();
@@ -206,6 +223,8 @@ int main(int argc, char* argv[]){
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
 	glutCreateWindow("mirror");
+	glutReshapeWindow(800, 600);
+	glutPositionWindow(50, 50);
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_NORMALIZE);
 	setLight();

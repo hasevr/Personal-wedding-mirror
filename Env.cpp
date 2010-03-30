@@ -1,4 +1,5 @@
 #include "Env.h"
+#include "Contents.h"
 
 Env env;
 
@@ -225,9 +226,10 @@ void Env::WritePs(){
 }
 void Env::Init(){
 	drawMode = DM_DESIGN;
+	front.Init();
 	config.Init();
 	projPose.Pos() = Vec3d(0, 0, -config.outY[1]);
-	projPose = Affined::Rot(Rad(180), 'y') * projPose;
+//	projPose = Affined::Rot(Rad(180), 'y') * projPose;
 	centerSeat = Vec3d(config.wall - 1, 0, 0);
 	InitMirror();
 	InitSupport();
@@ -237,14 +239,26 @@ void Env::Init(){
 	InitGL();
 }
 
+extern Affinef mouseView;
+extern Vec2i windowSize;
+
 void Env::Draw(){
 	if (drawMode == DM_SHEET) env.DrawSheet();
 	if (drawMode == DM_MIRROR) env.DrawMirror();
+	if (drawMode == DM_FRONT) env.DrawFront();
 	if (drawMode == DM_DESIGN) env.DrawDesign();
-	if (drawMode == DM_WORLD) env.DrawWorld();
+	if (drawMode == DM_WORLD) env.DrawDesign();
 }
 
 void Env::DrawSheet(){
+	//	マウス操作による視点の設定
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	gluPerspective(60.0, (GLfloat)windowSize.x/(GLfloat)windowSize.y, 0.01, 50.0);
+	glMatrixMode(GL_MODELVIEW);	
+	glMatrixMode(GL_MODELVIEW);
+	glLoadMatrixf(mouseView.inv());
+	//	描画
 	glDisable(GL_LIGHTING);
 	for(unsigned i=0; i<sheets.size(); ++i){
 		glColor3d(1,1,1);
@@ -270,6 +284,31 @@ void Env::DrawSheet(){
 	glEnd();
 	glEnable(GL_LIGHTING);
 }
+void Env::DrawFront(){
+	glMatrixMode(GL_PROJECTION);
+	Vec3d screen(0, front.hOff + front.h/2, front.d);
+	Vec2d size(front.w, front.h);
+	Affined projection = Affined::ProjectionGL(screen, size, 0.1, 1000);
+	glLoadMatrixd(projection);
+	glMatrixMode(GL_MODELVIEW);
+	Affined view;
+	view.LookAtGL(Vec3d(0, 0, 1), Vec3d(0,1,0));
+	glLoadMatrixd(view.inv());
+	glCallList(contents.list);
+}
+void Env::DrawBack(){
+	glMatrixMode(GL_PROJECTION);
+	Vec3d screen(0, front.hOff + front.h/2, front.d);
+	Vec2d size(front.w, front.h);
+	Affined projection = Affined::ProjectionGL(screen, size, 0.1, 1000);
+	glLoadMatrixd(projection);
+	glMatrixMode(GL_MODELVIEW);
+	Affined view;
+	view.LookAtGL(Vec3d(0, 0, -1), Vec3d(0,1,0));
+	glLoadMatrixd(view.inv());
+	glCallList(contents.list);
+}
+
 void Env::DrawMirror(){
 	glMatrixMode(GL_PROJECTION);
 	Vec3d screen(0, config.hOff + config.h/2, config.d);
@@ -313,6 +352,15 @@ void Env::DrawMirror(){
 	glEnable(GL_LIGHTING);
 }
 void Env::DrawDesign(){
+	//	マウス操作による視点の設定
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	gluPerspective(60.0, (GLfloat)windowSize.x/(GLfloat)windowSize.y, 0.01, 50.0);
+	glMatrixMode(GL_MODELVIEW);	
+	glMatrixMode(GL_MODELVIEW);
+	glLoadMatrixf(mouseView.inv());
+	if (drawMode== DM_WORLD) glMultMatrixd(projPose);
+	//	描画
 	glDisable(GL_LIGHTING);
 	glBegin(GL_LINES);
 	for(int i=0; i<3; ++i){
@@ -398,8 +446,4 @@ void Env::DrawDesign(){
 		glEnd();
 	}
 	glEnable(GL_LIGHTING);
-}
-void Env::DrawWorld(){
-	glMultMatrixd(projPose);
-	DrawDesign();
 }

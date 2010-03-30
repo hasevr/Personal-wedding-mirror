@@ -1,4 +1,5 @@
 #include "Decal.h"
+#include "Env.h"
 #ifdef USE_GLEW
 #include <GL/glew.h>
 #endif
@@ -6,11 +7,52 @@
 #include <io.h>
 #include <../src/Graphics/GRLoadBmp.h>
 
+Key::Key(){
+	duration = 0;
+	transition = 0;
+}
+Key::Key(double d, double t, Posed p){
+	duration = d;
+	transition = t;
+	posture = p;
+}
+Posed Path::GetPose(double time){
+	double ratio=0;
+	iterator it;
+	for(it = begin(); it != end(); ++it){
+		if (time > it->duration){
+			time -= it->duration;
+			if (time > it->transition){
+				time -= it->transition;
+			}else{
+				ratio = time / it->transition;
+				if (it+1 == end()) ratio = 0;
+				break;
+			}
+		}else{
+			ratio = 0;
+			break;
+		}
+	}
+	if (ratio == 0){
+		return it->posture;
+	}else{		
+		//	(it+1)->posture = it->posture * dp
+		Posed dp = it->posture.Inv() * (it+1)->posture;
+		dp.Ori() = Quaterniond::Rot(dp.Ori().RotationHalf() * ratio);
+		dp.Pos() *= ratio;
+		return it->posture * dp;
+	}
+}
+
 Decal::Decal(){
 	id = 0;
-	sheetSize = Vec2d(40, 30);
+	sheetSize = Vec2d(4, 3);
+	time = 0;
 }
 void Decal::Draw(){
+	glPushMatrix();
+	glMultMatrixd(posture);
 	glEnable(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, id);
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST );
@@ -25,6 +67,7 @@ void Decal::Draw(){
 	glVertex3d( sheetSize.x/2,  sheetSize.y/2, 0);
 	glEnd();
 	glDisable(GL_TEXTURE_2D);
+	glPopMatrix();
 }
 void Decal::Release(){
 	glDeleteTextures(1, &id);
