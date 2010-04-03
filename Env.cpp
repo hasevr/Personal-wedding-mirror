@@ -323,6 +323,7 @@ void Env::DrawSheet(){
 	glEnable(GL_LIGHTING);
 }
 void Env::DrawFront(){
+/*
 	glMatrixMode(GL_PROJECTION);
 	Vec3d screen(0, front.hOff + front.h/2, front.d);
 	Vec2d size(front.w, front.h);
@@ -332,10 +333,15 @@ void Env::DrawFront(){
 	Affined view;
 	view.LookAtGL(Vec3d(0, 0, 1), Vec3d(0,1,0));
 	glLoadMatrixd(view.inv());
+*/
+	glMatrixMode(GL_PROJECTION);
+	glLoadMatrixd(cell[DIVY][0].projection[0]);
+	glMatrixMode(GL_MODELVIEW);
+	glLoadMatrixd(cell[DIVY][0].view[0]);
 	glCallList(contents.list);
 }
 void Env::DrawBack(){
-	glMatrixMode(GL_PROJECTION);
+/*	glMatrixMode(GL_PROJECTION);
 	Vec3d screen(0, front.hOff + front.h/2, front.d);
 	Vec2d size(front.w, front.h);
 	Affined projection = Affined::ProjectionGL(screen, size, 0.1, 1000);
@@ -344,6 +350,11 @@ void Env::DrawBack(){
 	Affined view;
 	view.LookAtGL(Vec3d(0, 0, -1), Vec3d(0,1,0));
 	glLoadMatrixd(view.inv());
+*/
+	glMatrixMode(GL_PROJECTION);
+	glLoadMatrixd(cell[DIVY][0].projection[1]);
+	glMatrixMode(GL_MODELVIEW);
+	glLoadMatrixd(cell[DIVY][0].view[1]);
 	glCallList(contents.list);
 }
 

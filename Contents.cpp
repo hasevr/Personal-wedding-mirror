@@ -130,13 +130,13 @@ void Contents::DrawCam(){
 		glBindTexture(GL_TEXTURE_2D, cvTex);
 		glBegin(GL_TRIANGLE_STRIP);
 		glTexCoord2dv(cvTexCoord[0]);
-		glVertex3d(-1,-1*0.75, d);
-		glTexCoord2dv(cvTexCoord[1]);
 		glVertex3d( 1,-1*0.75, d);
+		glTexCoord2dv(cvTexCoord[1]);
+		glVertex3d(-1,-1*0.75, d);
 		glTexCoord2dv(cvTexCoord[2]);
-		glVertex3d(-1, 1*0.75, d);
-		glTexCoord2dv(cvTexCoord[3]);
 		glVertex3d( 1, 1*0.75, d);
+		glTexCoord2dv(cvTexCoord[3]);
+		glVertex3d(-1, 1*0.75, d);
 		glEnd();
 		glDisable(GL_TEXTURE_2D);
 	}else{

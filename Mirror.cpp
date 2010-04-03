@@ -134,8 +134,6 @@ void Cell::CalcPosition(double depth, int id){	//	’¸“_id ‚ªdepth‚É‚È‚é‚æ‚¤‚É‚·‚é
 	}
 }
 void Cell::InitFrontCamera(int fb){
-	Config& config = env.config;
-
 	view[fb].LookAtGL(Vec3d(0, 0, fb ? -1 : 1), Vec3d(0, 1, 0));
 	screenCenter = Vec3d(0, env.front.hOff + env.front.h/2, env.front.d);
 	screenSize = Vec2d(env.front.w, env.front.h);
@@ -163,6 +161,9 @@ void Cell::InitFrontCamera(int fb){
 	outPosCenter /= 4;
 	if (env.cameraMode == Env::CM_TILE){
 		view[fb] = Affined();
+		screenCenter.y = 0;
+		screenCenter.z = 4;
+		projection[fb] = Affined::ProjectionGL(screenCenter, screenSize, 1, 10000);
 	}
 }
 void Cell::InitCamera(int fb){
