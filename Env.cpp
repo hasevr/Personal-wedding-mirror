@@ -236,6 +236,7 @@ void Env::WritePs(){
 	}
 }
 void Env::Init(){
+	dt = 1.0 / 60;
 	drawMode = DM_DESIGN;
 	front.Init();
 	config.Init();
@@ -432,9 +433,9 @@ void Env::DrawDesign(){
 	glPopMatrix();
 	
 	glPushMatrix();
-	DrawHalfFront(0);
-	glMultMatrixd(Affined::Rot(Rad(180), 'y'));
 	DrawHalfFront(1);
+	glMultMatrixd(Affined::Rot(Rad(180), 'y'));
+	DrawHalfFront(0);
 	glPopMatrix();
 }
 void Env::DrawHalfFront(int fb){
@@ -550,4 +551,8 @@ void Env::DrawHalf(int fb){
 		glEnd();
 	}
 	glEnable(GL_LIGHTING);
+}
+void Env::Step(){
+	contents.Step(dt);
+	glutPostRedisplay();
 }

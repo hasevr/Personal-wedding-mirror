@@ -10,9 +10,9 @@
 #include <string>
 #include <sstream>
 #include <fstream>
-
-
 #include <io.h>
+
+#include <windows.h>
 
 using namespace Spr;
 
@@ -174,12 +174,20 @@ void keyboard(unsigned char key, int x, int y){
 }	
 
 
-static Affined afMove;
 void display(){
-	glutPostRedisplay();
 	contents.Draw(false);
 	env.Draw();
 	glutSwapBuffers();
+}
+
+void idle(){
+	static double next;
+	double time = timeGetTime() / 1000.0;
+	if (!next) next = time + env.dt;
+	while (next < time){
+		env.Step();
+		next += env.dt;
+	}
 }
 
 
@@ -219,7 +227,7 @@ int main(int argc, char* argv[]){
 	motion(0,0);
 	bFirstMouseMotion = true;
 	glutMotionFunc(motion);
-//	glutIdleFunc(idle);
+	glutIdleFunc(idle);
 
 	env.Init();
 	contents.Init();

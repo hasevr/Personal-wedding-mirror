@@ -33,5 +33,7 @@ struct Contents{
 	void DrawTile();
 	void LoadPhoto();
 	void DrawShip();
+
+	void Step(double dt);
 };
 extern Contents contents;

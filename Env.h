@@ -6,6 +6,7 @@ struct Sheet{
 	std::vector<Loop> loops;
 };
 struct Env{
+	double dt;
 	Config config;
 	Front front;
 	Cell cell[DIVY+1][DIVX];
@@ -30,6 +31,7 @@ struct Env{
 	};
 	CameraMode cameraMode;
 
+	void Step();
 	void InitCamera();
 	void InitMirror();
 	void InitSupport();

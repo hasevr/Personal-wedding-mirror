@@ -34,16 +34,17 @@ void Contents::DrawPhoto(){
 	decals.front().Draw();
 }
 
-double dt = 0.066;
-void Contents::DrawShip(){
+void Contents::Step(double dt){
 	static unsigned startCount=1;
 	if (startCount < decals.size() && decals[startCount-1].time > 4){
 		startCount++;
 	}
-	for(unsigned i=0; i< startCount; ++i){
+	for(unsigned i=0; i< startCount && i<decals.size(); ++i){
 		decals[i].time += dt;
 		decals[i].posture = paths[i%paths.size()].GetPose(decals[i].time);
 	}
+}
+void Contents::DrawShip(){
 	for(Decals::iterator it = decals.begin(); it != decals.end(); ++it){
 		it->Draw();
 	}
