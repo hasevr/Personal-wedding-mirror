@@ -90,7 +90,7 @@ void Cell::Init(int xIn, int yIn){
 		outDir[i] = -inDir[i] + 2*(inDir[i] - (inDir[i]*mirror.normal)*mirror.normal);
 	}
 }
-void Cell::CalcPosition(double depth, int id){	//	頂点id がdepthになるようにする
+void Cell::CalcPosition(double depth, int id, int fb){	//	頂点id がdepthになるようにする
 	Config& config = env.config;
 	//	一番真ん中下に近いものの奥行きをdepthに設定する
 	//	頂点は、-x -y, +x, -y, -x +y, +x +y の順
@@ -115,7 +115,7 @@ void Cell::CalcPosition(double depth, int id){	//	頂点id がdepthになるようにする
 	}else{
 		outPlace = 0;
 	}
-	outPosCenter = mirror.center + oc;
+	outPosCenter[fb] = mirror.center + oc;
 
 	for(int i=0; i<4; ++i){
 		Vec3d oc = outDir[i];
@@ -125,19 +125,19 @@ void Cell::CalcPosition(double depth, int id){	//	頂点id がdepthになるようにする
 		double wallRight = config.wall - mirror.vertex[i].x;
 		if (outPlace == 1) oc *= wallRight/oc.x;
 		else if (outPlace == -1) oc *= wallLeft/oc.x;
-		outPos[i] = mirror.vertex[i] + oc;
+		outPos[fb][i] = mirror.vertex[i] + oc;
 	}
 
 	//	imagePos
 	for(int i=0; i<4; ++i){
-		imagePos[i] = outPos[i] - (2*mirror.normal*(outPos[i] - mirror.center)) * mirror.normal;
+		imagePos[i] = outPos[fb][i] - (2*mirror.normal*(outPos[fb][i] - mirror.center)) * mirror.normal;
 	}
 }
 void Cell::InitFrontCamera(int fb){
 	Config& config = env.config;
 
-	if (fb==0) view.LookAtGL(Vec3d(0, 0, env.front.d), Vec3d(0, 1, 0));
-	else view.LookAtGL(Vec3d(0, 0, -env.front.d), Vec3d(0, 1, 0));
+	if (fb==0) view[fb].LookAtGL(Vec3d(0, 0, env.front.d), Vec3d(0, 1, 0));
+	else view[fb].LookAtGL(Vec3d(0, 0, -env.front.d), Vec3d(0, 1, 0));
 	screenCenter = Vec3d(0, env.front.hOff + env.front.h/2, env.front.d);
 	screenSize = Vec2d(env.front.w, env.front.h);
 
@@ -145,46 +145,46 @@ void Cell::InitFrontCamera(int fb){
 	texCoord[1] = Vec2d(1,0);
 	texCoord[2] = Vec2d(0,1);
 	texCoord[3] = Vec2d(1,1);
-	projection = Affined::ProjectionGL(screenCenter, screenSize, 1, 10000);
+	projection[fb] = Affined::ProjectionGL(screenCenter, screenSize, 1, 10000);
 	
 
 	localScreen[0] = Vec3d(-env.front.w/2, env.front.hOff, -env.front.d);
 	localScreen[1] = Vec3d( env.front.w/2, env.front.hOff, -env.front.d);
 	localScreen[2] = Vec3d(-env.front.w/2, env.front.hOff+env.front.h, -env.front.d);
 	localScreen[3] = Vec3d( env.front.w/2, env.front.hOff+env.front.h, -env.front.d);
-	outPosCenter = Vec3d();
+	outPosCenter[fb] = Vec3d();
 	for(int i=0; i<4; ++i){
 		localOutPos[i] = localScreen[i];
-		screen[i] = view * localScreen[i];
-		outPos[i] = screen[i];
-		outPosCenter += outPos[i];
+		screen[i] = view[fb] * localScreen[i];
+		outPos[fb][i] = screen[i];
+		outPosCenter[fb] += outPos[fb][i];
 	}
-	outPosCenter /= 4;
+	outPosCenter[fb] /= 4;
 	if (env.cameraMode == Env::CM_TILE){
-		view = Affined();
+		view[fb] = Affined();
 	}
 }
 void Cell::InitCamera(int fb){
 	Config& config = env.config;
 
 	if (env.cameraMode == Env::CM_WINDOW){
-		view.Pos() = env.projPose[fb].inv().Pos();
+		view[fb].Pos() = env.projPose[fb].inv().Pos();
 		if (outPlace){	//	壁だったら
-			view.LookAtGL(Vec3d(outPlace*config.wall, view.Pos().y, view.Pos().z), Vec3d(0, 1, 0));
+			view[fb].LookAtGL(Vec3d(outPlace*config.wall, view[fb].Pos().y, view[fb].Pos().z), Vec3d(0, 1, 0));
 		}else{
-			view.LookAtGL(Vec3d(view.Pos().x, config.ceil, view.Pos().z), Vec3d(0, 0, 1));
+			view[fb].LookAtGL(Vec3d(view[fb].Pos().x, config.ceil, view[fb].Pos().z), Vec3d(0, 0, 1));
 		}
 	}else if (env.cameraMode == Env::CM_TILE){
 		if (outPlace){	//	壁だったら
-			view.Pos() = Vec3d(outPlace*(config.wall-1), outPosCenter.y, outPosCenter.z);
-			view.LookAtGL(Vec3d(outPlace*config.wall, view.Pos().y, view.Pos().z), Vec3d(0, 1, 0));
+			view[fb].Pos() = Vec3d(outPlace*(config.wall-1), outPosCenter[fb].y, outPosCenter[fb].z);
+			view[fb].LookAtGL(Vec3d(outPlace*config.wall, view[fb].Pos().y, view[fb].Pos().z), Vec3d(0, 1, 0));
 		}else{
-			view.Pos() = Vec3d(outPosCenter.x, env.config.ceil-1, outPosCenter.z);
-			Vec3d head = (Vec3d(view.Pos().x, 0, view.Pos().z) - env.projPose[fb].inv() * env.centerSeat).unit();
-			view.LookAtGL(Vec3d(view.Pos().x, env.config.ceil, view.Pos().z), head);
+			view[fb].Pos() = Vec3d(outPosCenter[fb].x, env.config.ceil-1, outPosCenter[fb].z);
+			Vec3d head = (Vec3d(view[fb].Pos().x, 0, view[fb].Pos().z) - env.projPose[fb].inv() * env.centerSeat).unit();
+			view[fb].LookAtGL(Vec3d(view[fb].Pos().x, env.config.ceil, view[fb].Pos().z), head);
 		}
 	}
-	for(int i=0; i<4; ++i) localOutPos[i] = view.inv() * outPos[i];
+	for(int i=0; i<4; ++i) localOutPos[i] = view[fb].inv() * outPos[fb][i];
 	Vec3d localOutPosU[4];
 	for(int i=0; i<4; ++i) localOutPosU[i] = localOutPos[i] / -localOutPos[i].z;
 
@@ -204,7 +204,7 @@ void Cell::InitCamera(int fb){
 		texCoord[i].x = (localOutPosU[i].x - limit[0].x) / screenSize.x;
 		texCoord[i].y = (localOutPosU[i].y - limit[0].y) / screenSize.y;
 	}
-	projection = Affined::ProjectionGL(screenCenter, screenSize, 1, 10000);
+	projection[fb] = Affined::ProjectionGL(screenCenter, screenSize, 1, 10000);
 	localScreen[0] = Vec3d(limit[0].x, limit[0].y, -1);
 	localScreen[1] = Vec3d(limit[1].x, limit[0].y, -1);
 	localScreen[2] = Vec3d(limit[1].x, limit[1].y, -1);
@@ -213,13 +213,13 @@ void Cell::InitCamera(int fb){
 	for(int i=0; i<4; ++i){
 		//	k * localScreen[i] * localNormal = localOutPos[0] * localNormal;
 		localScreen[i] *= (localOutPos[0] * localNormal) / (localScreen[i] * localNormal);
-		screen[i] = view * localScreen[i];
+		screen[i] = view[fb] * localScreen[i];
 	}
 
 	if (env.cameraMode == Env::CM_WINDOW){
-		view = env.projPose[fb] * view;
+		view[fb] = env.projPose[fb] * view[fb];
 	}else if (env.cameraMode == Env::CM_TILE){
-		view = Affined();
+		view[fb] = Affined();
 	}
 }
 void Cell::InitGL(){
@@ -250,17 +250,17 @@ void Cell::InitGL(){
 	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);	
 #endif
 }
-void Cell::BeforeDrawTex(int tex){
+void Cell::BeforeDrawTex(int fb){
 	glViewport(0, 0, texSize, texSize);
 	glClearColor(0,0,0,1);
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 	glMatrixMode(GL_PROJECTION);
-	glLoadMatrixd(projection);
+	glLoadMatrixd(projection[fb]);
 	glMatrixMode(GL_MODELVIEW);
-	glLoadMatrixd(view.inv());
+	glLoadMatrixd(view[fb].inv());
 }
-void Cell::AfterDrawTex(int tex){
+void Cell::AfterDrawTex(int fb){
 	glFlush();
-	glBindTexture(GL_TEXTURE_2D, texName[tex]);
+	glBindTexture(GL_TEXTURE_2D, texName[fb]);
 	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, texSize,  texSize);
 }

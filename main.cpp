@@ -17,7 +17,7 @@
 using namespace Spr;
 
 
-double	CameraRotX = Rad(0), CameraRotY = Rad(90.0), CameraZoom = 2.0;
+double	CameraRotX = Rad(0), CameraRotY = Rad(-90.0), CameraZoom = 12.0;
 bool bLeftButton = false, bRightButton = false;
 int xlast, ylast;
 Affinef mouseView;
@@ -30,13 +30,13 @@ void __cdecl mouse(int button, int state, int x, int y){
 	glutPostRedisplay();
 }
 
+bool bFirstMouseMotion = false;
 void __cdecl motion(int x, int y){
-	static bool bFirst = true;
 	int xrel = x - xlast, yrel = y - ylast;
 	xlast = x;
 	ylast = y;
-	if(bFirst){
-		bFirst = false;
+	if(bFirstMouseMotion){
+		bFirstMouseMotion = false;
 		return;
 	}
 	// ç∂É{É^Éì
@@ -220,6 +220,8 @@ int main(int argc, char* argv[]){
 	glutReshapeFunc(reshape);
 	glutKeyboardFunc(keyboard);
 	glutMouseFunc(mouse);
+	motion(0,0);
+	bFirstMouseMotion = true;
 	glutMotionFunc(motion);
 //	glutIdleFunc(idle);
 

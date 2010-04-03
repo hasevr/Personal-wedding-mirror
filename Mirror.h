@@ -40,15 +40,15 @@ struct Cell{
 	Vec3d outDirCenter;
 	Vec3d inDir[4];
 	Vec3d outDir[4];
-	Vec3d outPosCenter;
-	Vec3d outPos[4];
+	Vec3d outPosCenter[2];
+	Vec3d outPos[2][4];
 	Vec3d imagePos[4];
 	Vec3d inPos[4];
 	int outPlace;	//	-1: 左の壁, 0:天井, 1:右の壁
 	Mirror mirror;
 	//	最初のレンダリング用のカメラ
-	Affined view;
-	Affined projection;
+	Affined view[2];
+	Affined projection[2];
 	Vec3d screenCenter;
 	Vec2d screenSize;
 	Vec3d screen[4];
@@ -64,7 +64,7 @@ struct Cell{
 	int	texSize;
 
 	void Init(int xIn, int yIn);
-	void CalcPosition(double depth, int id);	//	頂点id がdepthになるようにする
+	void CalcPosition(double depth, int id, int fb);	//	頂点id がdepthになるようにする
 	void InitCamera(int fb);	//	0:front	1:back
 	void InitFrontCamera(int fb);
 	void InitGL();

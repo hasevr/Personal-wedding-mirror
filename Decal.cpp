@@ -50,7 +50,7 @@ Posed Path::GetPose(double time){
 
 Decal::Decal(){
 	id = 0;
-	sheetSize = Vec2d(4, 3)*4;
+	sheetSize = Vec2d(4, 3)*4*2;
 	time = 0;
 }
 void Decal::Draw(){

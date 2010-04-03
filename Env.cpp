@@ -3,7 +3,7 @@
 
 Env env;
 
-void Env::InitMirror(){
+void Env::InitMirror(int fb){
 	int y;
 	for(y=0; y<DIVY; ++y){
 		for(int x=0; x<DIVX; ++x){
@@ -15,11 +15,11 @@ void Env::InitMirror(){
 	}
 	double depth = config.d;
 	for(int y=0; y<DIVY; ++y){
-		cell[y][DIVX/2-1].CalcPosition(depth, 1);
-		cell[y][DIVX/2].CalcPosition(depth, 0);
+		cell[y][DIVX/2-1].CalcPosition(depth, 1, fb);
+		cell[y][DIVX/2].CalcPosition(depth, 0, fb);
 		for(int i=1; i<DIVX/2; ++i){
-			cell[y][DIVX/2-i-1].CalcPosition(cell[y][DIVX/2-i].mirror.vertex[0].z, 1);
-			cell[y][DIVX/2+i].CalcPosition(cell[y][DIVX/2+i-1].mirror.vertex[1].z, 0);
+			cell[y][DIVX/2-i-1].CalcPosition(cell[y][DIVX/2-i].mirror.vertex[0].z, 1, fb);
+			cell[y][DIVX/2+i].CalcPosition(cell[y][DIVX/2+i-1].mirror.vertex[1].z, 0, fb);
 		}
 		depth = cell[y][DIVX/2].mirror.vertex[2].z;
 	}
@@ -242,8 +242,10 @@ void Env::Init(){
 	projPose[1] = projPose[0];
 	projPose[1] = Affined::Rot(Rad(180), 'y') * projPose[1];
 	centerSeat = Vec3d(config.wall - 1, 0, 0);
-	InitMirror();
+	InitMirror(0);
+	InitMirror(1);
 	InitCamera(0);
+	InitCamera(1);
 	InitSupport();
 	PlaceMirror();
 	PlaceSupport();
@@ -268,21 +270,19 @@ void Env::RenderTex(int fb){
 void Env::Draw(){
 	if (drawMode == DM_MIRROR || drawMode == DM_MIRROR_BACK) RenderTex(0);
 	if (drawMode == DM_DESIGN){
-		InitCamera(0);
 		RenderTex(0);
-		InitCamera(1);
 		RenderTex(1);
-	}	
+	}
 	//	メインのレンダリングの準備
 	glViewport(0, 0, windowSize.x, windowSize.y);	//	ビューポートをWindow全体に
 	glClearColor(0,0,0,1);
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 	//	表示モードにあわせて表示
-	if (drawMode == DM_SHEET) env.DrawSheet();
-	else if (drawMode == DM_MIRROR) env.DrawMirror(0);
-	else if (drawMode == DM_MIRROR_BACK) env.DrawMirror(1);
-	else if (drawMode == DM_FRONT) env.DrawFront();
-	else if (drawMode == DM_DESIGN) env.DrawDesign();
+	if (drawMode == DM_SHEET) DrawSheet();
+	else if (drawMode == DM_MIRROR) DrawMirror(0);
+	else if (drawMode == DM_MIRROR_BACK) DrawMirror(1);
+	else if (drawMode == DM_FRONT) DrawFront();
+	else if (drawMode == DM_DESIGN) DrawDesign();
 	else {
 		std::cout << "Env::Draw() do not suppot mode " << drawMode << std::endl;
 		assert(0);
@@ -422,7 +422,6 @@ void Env::DrawDesign(){
 	glPopMatrix();
 	
 	DrawHalfFront(0);
-	glMultMatrixd(Affined::Rot(Rad(180), 'Y'));	
 	DrawHalfFront(1);
 }
 void Env::DrawHalfFront(int fb){
@@ -430,24 +429,24 @@ void Env::DrawHalfFront(int fb){
 	glColor3d(1,1,1);
 	glPointSize(4);
 	glBegin(GL_POINTS);
-	glVertex3dv(cell[DIVY][0].outPosCenter);
+	glVertex3dv(cell[DIVY][0].outPosCenter[fb]);
 	glEnd();
 	glEnable(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, cell[DIVY][0].texName[fb]);
 	glBegin(GL_TRIANGLE_STRIP);
 	for(int i=0; i<4; ++i){
 		glTexCoord2dv(cell[DIVY][0].texCoord[i]);
-		glVertex3dv(cell[DIVY][0].outPos[i]);
+		glVertex3dv(cell[DIVY][0].outPos[fb][i]);
 	}
 	glEnd();
 	glDisable(GL_TEXTURE_2D);
 	//	OpenGLのカメラの描画域の表示
 	glColor3d(1,1,1);
 	glBegin(GL_LINE_LOOP);
-	glVertex3dv(cell[DIVY][0].screen[0]);
-	glVertex3dv(cell[DIVY][0].screen[1]);
-	glVertex3dv(cell[DIVY][0].screen[3]);
-	glVertex3dv(cell[DIVY][0].screen[2]);
+	glVertex3dv(cell[DIVY][0].outPos[fb][0]);
+	glVertex3dv(cell[DIVY][0].outPos[fb][1]);
+	glVertex3dv(cell[DIVY][0].outPos[fb][3]);
+	glVertex3dv(cell[DIVY][0].outPos[fb][2]);
 	glEnd();				
 	glEnable(GL_LIGHTING);
 }
@@ -484,13 +483,13 @@ void Env::DrawHalf(int fb){
 			glPointSize(4);
 			glBegin(GL_POINTS);
 			glVertex3dv(cell[y][x].mirror.center);
-			glVertex3dv(cell[y][x].outPosCenter);
+			glVertex3dv(cell[y][x].outPosCenter[fb]);
 			glEnd();
 			//	鏡から、表示位置までの光線
 			glColor3dv(Vec3d((float)y/DIVY, (float)x/DIVX, 0.5));
 			glBegin(GL_LINES);
 			glVertex3dv(cell[y][x].mirror.center);
-			glVertex3dv(cell[y][x].outPosCenter);
+			glVertex3dv(cell[y][x].outPosCenter[fb]);
 			glEnd();
 			
 			//	表示位置の描画
@@ -499,7 +498,7 @@ void Env::DrawHalf(int fb){
 			glBegin(GL_TRIANGLE_STRIP);
 			for(int i=0; i<4; ++i){
 				glTexCoord2dv(cell[y][x].texCoord[i]);
-				glVertex3dv(cell[y][x].outPos[i]);
+				glVertex3dv(cell[y][x].outPos[fb][i]);
 			}
 			glEnd();
 			//	表示位置の虚像の表示

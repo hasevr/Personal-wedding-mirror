@@ -34,7 +34,7 @@ void Contents::DrawPhoto(){
 	decals.front().Draw();
 }
 
-double dt = 0.033;
+double dt = 0.066;
 void Contents::DrawShip(){
 	static unsigned startCount=1;
 	if (startCount < decals.size() && decals[startCount-1].time > 3){
@@ -198,7 +198,6 @@ void Contents::Init(){
 	frontDir /= frontDir.z;
 	Vec3d backDir = frontDir;
 	backDir.z *= -1;
-	Posed pose;
 	//	‰“‚­‚©‚ç
 /*	double alpha = 1.2;
 	double delta = 0.3;
@@ -207,39 +206,43 @@ void Contents::Init(){
 		paths.back().push_back(Key(0, delta, pose));
 	}
 	*/
+	double speed = 1;
 	for(int i=0; i<2; ++i){
+		Posed pose;
 		paths.push_back(Path());
-		pose.Pos() = frontDir * 300;
-//		paths.back().push_back(Key(0, 8, pose));
-		pose.Pos() = frontDir * 120;
-		paths.back().push_back(Key(0, 3, pose));
-		double yOff = 6;
-		double xOff = i==0 ? 5 : -5;
+		pose.Pos() = frontDir * 600;
+		paths.back().push_back(Key(0, 12/speed, pose));
+		pose.Pos() = frontDir * 240;
+		paths.back().push_back(Key(0, 3/speed, pose));
+		double yOff = 6*2;
+		double xOff = (i==0 ? 10 : -10);
 		Affined af;
 		double lookDiff = -std::abs(xOff);
 
-		af.Pos() = Vec3d(xOff, yOff, 30);
-		af.LookAtGL(Vec3d(0, yOff+lookDiff, 30), Vec3d(0,1,0));
-		paths.back().push_back(Key(0, 1.5, Posed(af)));
+		af.Pos() = Vec3d(xOff, yOff, 60);
+		af.LookAtGL(Vec3d(0, yOff+lookDiff, 60), Vec3d(0,1,0));
+		paths.back().push_back(Key(0, 9/speed, Posed(af)));
 
 		af.Pos() = Vec3d(xOff, yOff, 15);
 		af.LookAtGL(Vec3d(0, yOff+lookDiff, 15), Vec3d(0,1,0));
-		paths.back().push_back(Key(0, 3, Posed(af)));
+		paths.back().push_back(Key(0, 6/speed, Posed(af)));
 		
 		//-------------------------‘ÎÌü-----------------------
 
 		af.Pos() = Vec3d(xOff, yOff, -15);
 		af.LookAtGL(Vec3d(0, yOff+lookDiff, -10), Vec3d(0,1,0));
-		paths.back().push_back(Key(0, 1, Posed(af)));
+		paths.back().push_back(Key(0, 9/speed, Posed(af)));
 
-		af.Pos() = Vec3d(xOff, yOff, -30);
-		af.LookAtGL(Vec3d(0, yOff+lookDiff, -30), Vec3d(0,1,0));
-		paths.back().push_back(Key(0, 1.5, Posed(af)));
+		af.Pos() = Vec3d(xOff, yOff, -60);
+		af.LookAtGL(Vec3d(0, yOff+lookDiff, -60), Vec3d(0,1,0));
+		paths.back().push_back(Key(0, 3/speed, Posed(af)));
 
-		pose.Pos() = backDir * 120;
-		paths.back().push_back(Key(0, 3, pose));
-		pose.Pos() = backDir * 300;
-		paths.back().push_back(Key(0, 8, pose));
+		if (i==0) pose.Ori() = Quaterniond::Rot(Rad(180), 'y');
+		else pose.Ori() = Quaterniond::Rot(Rad(-180), 'y');
+		pose.Pos() = backDir * 240;
+		paths.back().push_back(Key(0, 12/speed, pose));
+		pose.Pos() = backDir * 600;
+		paths.back().push_back(Key(0, 0, pose));
 	}
 
 	//	ƒJƒƒ‰“ü—ÍŠÖŒW
