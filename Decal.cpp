@@ -34,6 +34,9 @@ Posed Path::GetPose(double time){
 			break;
 		}
 	}
+	if (it == end()){
+		return back().posture;
+	}
 	if (ratio == 0){
 		return it->posture;
 	}else{		
@@ -47,7 +50,7 @@ Posed Path::GetPose(double time){
 
 Decal::Decal(){
 	id = 0;
-	sheetSize = Vec2d(4, 3);
+	sheetSize = Vec2d(4, 3)*4;
 	time = 0;
 }
 void Decal::Draw(){

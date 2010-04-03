@@ -42,7 +42,7 @@ void Contents::DrawShip(){
 	}
 	for(unsigned i=0; i< startCount; ++i){
 		decals[i].time += dt;
-		decals[i].posture = paths.back().GetPose(decals[i].time);
+		decals[i].posture = paths[i%paths.size()].GetPose(decals[i].time);
 	}
 	for(Decals::iterator it = decals.begin(); it != decals.end(); ++it){
 		it->Draw();
@@ -194,33 +194,53 @@ void Contents::Draw(bool isInit){
 
 void Contents::Init(){
 	//	パスの設定
-	paths.push_back(Path());
 	Vec3d frontDir(0, env.front.hOff + env.front.h/2, env.front.d);
-	frontDir.unitize();
+	frontDir /= frontDir.z;
+	Vec3d backDir = frontDir;
+	backDir.z *= -1;
 	Posed pose;
-	pose.Pos() = frontDir * 300;
-	paths.back().push_back(Key(0, 4, pose));
-	pose.Pos() = frontDir * 35;
-	paths.back().push_back(Key(0, 6, pose));
-	Affined af;
-	af.Pos() = frontDir * 10 + Vec3d(10, 0, 0);
-	af.LookAt(Vec3d(0, 0, 0), Vec3d(0,1,0));
-	paths.back().push_back(Key(0, 2, Posed(af)));
-	af.Pos() = Vec3d(10, 5, 0);
-	af.LookAt(Vec3d(0, 0, 0), Vec3d(0,1,0));
-	paths.back().push_back(Key(0, 2, Posed(af)));
-	af.Pos() = Vec3d(10, 5, -10);
-	af.LookAt(Vec3d(0, 0, 0), Vec3d(0,1,0));
-	paths.back().push_back(Key(0, 2, Posed(af)));
+	//	遠くから
+/*	double alpha = 1.2;
+	double delta = 0.3;
+	for(int i=6; i>=0; --i){
+		pose.Pos() = frontDir * 20*pow(alpha, i);
+		paths.back().push_back(Key(0, delta, pose));
+	}
+	*/
+	for(int i=0; i<2; ++i){
+		paths.push_back(Path());
+		pose.Pos() = frontDir * 300;
+//		paths.back().push_back(Key(0, 8, pose));
+		pose.Pos() = frontDir * 120;
+		paths.back().push_back(Key(0, 3, pose));
+		double yOff = 6;
+		double xOff = i==0 ? 5 : -5;
+		Affined af;
+		double lookDiff = -std::abs(xOff);
 
-	af.Pos() = Vec3d(0, 5, -10);
-	af.LookAt(Vec3d(0, 0, 0), Vec3d(0,1,0));
-	paths.back().push_back(Key(0, 2, Posed(af)));
+		af.Pos() = Vec3d(xOff, yOff, 30);
+		af.LookAtGL(Vec3d(0, yOff+lookDiff, 30), Vec3d(0,1,0));
+		paths.back().push_back(Key(0, 1.5, Posed(af)));
 
-	af.Pos() = Vec3d(0, 5, -20);
-	af.LookAt(Vec3d(0, 0, 0), Vec3d(0,1,0));
-	paths.back().push_back(Key(0, 2, Posed(af)));
+		af.Pos() = Vec3d(xOff, yOff, 15);
+		af.LookAtGL(Vec3d(0, yOff+lookDiff, 15), Vec3d(0,1,0));
+		paths.back().push_back(Key(0, 3, Posed(af)));
+		
+		//-------------------------対称線-----------------------
 
+		af.Pos() = Vec3d(xOff, yOff, -15);
+		af.LookAtGL(Vec3d(0, yOff+lookDiff, -10), Vec3d(0,1,0));
+		paths.back().push_back(Key(0, 1, Posed(af)));
+
+		af.Pos() = Vec3d(xOff, yOff, -30);
+		af.LookAtGL(Vec3d(0, yOff+lookDiff, -30), Vec3d(0,1,0));
+		paths.back().push_back(Key(0, 1.5, Posed(af)));
+
+		pose.Pos() = backDir * 120;
+		paths.back().push_back(Key(0, 3, pose));
+		pose.Pos() = backDir * 300;
+		paths.back().push_back(Key(0, 8, pose));
+	}
 
 	//	カメラ入力関係
 	cvCam = cvCreateCameraCapture(CV_CAP_ANY);       //カメラ初期化

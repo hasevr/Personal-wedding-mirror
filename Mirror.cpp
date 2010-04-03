@@ -133,11 +133,42 @@ void Cell::CalcPosition(double depth, int id){	//	’¸“_id ‚ªdepth‚É‚È‚é‚æ‚¤‚É‚·‚é
 		imagePos[i] = outPos[i] - (2*mirror.normal*(outPos[i] - mirror.center)) * mirror.normal;
 	}
 }
-void Cell::InitCamera(){
+void Cell::InitFrontCamera(int fb){
+	Config& config = env.config;
+
+	if (fb==0) view.LookAtGL(Vec3d(0, 0, env.front.d), Vec3d(0, 1, 0));
+	else view.LookAtGL(Vec3d(0, 0, -env.front.d), Vec3d(0, 1, 0));
+	screenCenter = Vec3d(0, env.front.hOff + env.front.h/2, env.front.d);
+	screenSize = Vec2d(env.front.w, env.front.h);
+
+	texCoord[0] = Vec2d(0,0);
+	texCoord[1] = Vec2d(1,0);
+	texCoord[2] = Vec2d(0,1);
+	texCoord[3] = Vec2d(1,1);
+	projection = Affined::ProjectionGL(screenCenter, screenSize, 1, 10000);
+	
+
+	localScreen[0] = Vec3d(-env.front.w/2, env.front.hOff, -env.front.d);
+	localScreen[1] = Vec3d( env.front.w/2, env.front.hOff, -env.front.d);
+	localScreen[2] = Vec3d(-env.front.w/2, env.front.hOff+env.front.h, -env.front.d);
+	localScreen[3] = Vec3d( env.front.w/2, env.front.hOff+env.front.h, -env.front.d);
+	outPosCenter = Vec3d();
+	for(int i=0; i<4; ++i){
+		localOutPos[i] = localScreen[i];
+		screen[i] = view * localScreen[i];
+		outPos[i] = screen[i];
+		outPosCenter += outPos[i];
+	}
+	outPosCenter /= 4;
+	if (env.cameraMode == Env::CM_TILE){
+		view = Affined();
+	}
+}
+void Cell::InitCamera(int fb){
 	Config& config = env.config;
 
 	if (env.cameraMode == Env::CM_WINDOW){
-		view.Pos() = env.projPose.inv().Pos();
+		view.Pos() = env.projPose[fb].inv().Pos();
 		if (outPlace){	//	•Ç‚¾‚Á‚½‚ç
 			view.LookAtGL(Vec3d(outPlace*config.wall, view.Pos().y, view.Pos().z), Vec3d(0, 1, 0));
 		}else{
@@ -149,7 +180,7 @@ void Cell::InitCamera(){
 			view.LookAtGL(Vec3d(outPlace*config.wall, view.Pos().y, view.Pos().z), Vec3d(0, 1, 0));
 		}else{
 			view.Pos() = Vec3d(outPosCenter.x, env.config.ceil-1, outPosCenter.z);
-			Vec3d head = (Vec3d(view.Pos().x, 0, view.Pos().z) - env.projPose.inv() * env.centerSeat).unit();
+			Vec3d head = (Vec3d(view.Pos().x, 0, view.Pos().z) - env.projPose[fb].inv() * env.centerSeat).unit();
 			view.LookAtGL(Vec3d(view.Pos().x, env.config.ceil, view.Pos().z), head);
 		}
 	}
@@ -186,23 +217,25 @@ void Cell::InitCamera(){
 	}
 
 	if (env.cameraMode == Env::CM_WINDOW){
-		view = env.projPose * view;
+		view = env.projPose[fb] * view;
 	}else if (env.cameraMode == Env::CM_TILE){
 		view = Affined();
 	}
 }
 void Cell::InitGL(){
+	char* tmp = new char[texSize*texSize*4];
 	//	texBuf
 	glPixelStorei( GL_UNPACK_ALIGNMENT, 1 );
-	glGenTextures( 1, &texName);
-	glBindTexture( GL_TEXTURE_2D, texName );
-	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
-	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
-	glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL );
-	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
-	char* tmp = new char[texSize*texSize*4];
-	glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, texSize, texSize, 0, GL_RGBA, GL_UNSIGNED_BYTE, tmp);
+	glGenTextures( 2, texName);
+	for(int i=0; i<2; ++i){
+		glBindTexture( GL_TEXTURE_2D, texName[i] );
+		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
+		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
+		glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL );
+		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+		glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, texSize, texSize, 0, GL_RGBA, GL_UNSIGNED_BYTE, tmp);
+	}
 	delete tmp;
 #ifdef USE_GLEW
 	//	render(depth)Buf	
@@ -217,7 +250,7 @@ void Cell::InitGL(){
 	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);	
 #endif
 }
-void Cell::BeforeDrawTex(){
+void Cell::BeforeDrawTex(int tex){
 	glViewport(0, 0, texSize, texSize);
 	glClearColor(0,0,0,1);
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
@@ -226,13 +259,8 @@ void Cell::BeforeDrawTex(){
 	glMatrixMode(GL_MODELVIEW);
 	glLoadMatrixd(view.inv());
 }
-void Cell::AfterDrawTex(){
+void Cell::AfterDrawTex(int tex){
 	glFlush();
-	glBindTexture(GL_TEXTURE_2D, texName);
+	glBindTexture(GL_TEXTURE_2D, texName[tex]);
 	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, texSize,  texSize);
-}
-void Cell::DrawListTex(GLuint ct){
-	BeforeDrawTex();
-	glCallList(ct);
-	AfterDrawTex();
 }

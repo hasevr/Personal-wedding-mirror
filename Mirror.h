@@ -56,7 +56,7 @@ struct Cell{
 	Vec3d localOutPos[4];
 	Vec2d texCoord[4];
 	//	レンダリングバッファ
-	GLuint  texName;
+	GLuint  texName[2];
 #ifdef USE_GLEW
 	GLuint  renderName;
 	GLuint  frameName;
@@ -65,11 +65,11 @@ struct Cell{
 
 	void Init(int xIn, int yIn);
 	void CalcPosition(double depth, int id);	//	頂点id がdepthになるようにする
-	void InitCamera();
+	void InitCamera(int fb);	//	0:front	1:back
+	void InitFrontCamera(int fb);
 	void InitGL();
-	void BeforeDrawTex();
-	void AfterDrawTex();
-	void DrawListTex(GLuint ct);
+	void BeforeDrawTex(int tex);
+	void AfterDrawTex(int tex);
 };
 
 struct Plane{

@@ -4,10 +4,14 @@
 Env env;
 
 void Env::InitMirror(){
-	for(int y=0; y<DIVY; ++y){
+	int y;
+	for(y=0; y<DIVY; ++y){
 		for(int x=0; x<DIVX; ++x){
 			cell[y][x].Init(x,y);
 		}
+	}
+	for(int x=0; x<2; ++x){
+		cell[y][x].Init(x,y);
 	}
 	double depth = config.d;
 	for(int y=0; y<DIVY; ++y){
@@ -19,14 +23,16 @@ void Env::InitMirror(){
 		}
 		depth = cell[y][DIVX/2].mirror.vertex[2].z;
 	}
-	InitCamera();
+	InitCamera(0);
 }
-void Env::InitCamera(){
-	for(int y=0; y<DIVY; ++y){
+void Env::InitCamera(int fb){
+	int y;
+	for(y=0; y<DIVY; ++y){
 		for(int x=0; x<DIVX; ++x){
-			cell[y][x].InitCamera();
+			cell[y][x].InitCamera(fb);
 		}
 	}
+	cell[y][0].InitFrontCamera(fb);
 }
 
 void Env::InitSupport(){
@@ -198,10 +204,14 @@ void Env::PlaceMirror(){
 	}
 }
 void Env::InitGL(){
-	for(int y=0; y<DIVY; ++y){
+	int y;
+	for(y=0; y<DIVY; ++y){
 		for(int x=0; x<DIVX; ++x){
 			cell[y][x].InitGL();
 		}
+	}
+	for(int x=0; x<2; ++x){
+		cell[y][x].InitGL();
 	}
 }
 void Env::WritePs(){
@@ -228,10 +238,12 @@ void Env::Init(){
 	drawMode = DM_DESIGN;
 	front.Init();
 	config.Init();
-	projPose.Pos() = Vec3d(0, 0, -config.outY[1]);
-//	projPose = Affined::Rot(Rad(180), 'y') * projPose;
+	projPose[0].Pos() = Vec3d(0, 0, -config.outY[1]+1.2);
+	projPose[1] = projPose[0];
+	projPose[1] = Affined::Rot(Rad(180), 'y') * projPose[1];
 	centerSeat = Vec3d(config.wall - 1, 0, 0);
 	InitMirror();
+	InitCamera(0);
 	InitSupport();
 	PlaceMirror();
 	PlaceSupport();
@@ -242,12 +254,39 @@ void Env::Init(){
 extern Affinef mouseView;
 extern Vec2i windowSize;
 
+void Env::RenderTex(int fb){
+	//	テクスチャへのレンダリング
+	for(int y=0; y<DIVY+1; ++y){
+		for(int x=0; x<DIVX; ++x){
+			if (y==DIVY && x>=2) break;
+			env.cell[y][x].BeforeDrawTex(fb);
+			glCallList(contents.list);
+			env.cell[y][x].AfterDrawTex(fb);
+		}
+	}	
+}
 void Env::Draw(){
+	if (drawMode == DM_MIRROR || drawMode == DM_MIRROR_BACK) RenderTex(0);
+	if (drawMode == DM_DESIGN){
+		InitCamera(0);
+		RenderTex(0);
+		InitCamera(1);
+		RenderTex(1);
+	}	
+	//	メインのレンダリングの準備
+	glViewport(0, 0, windowSize.x, windowSize.y);	//	ビューポートをWindow全体に
+	glClearColor(0,0,0,1);
+	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+	//	表示モードにあわせて表示
 	if (drawMode == DM_SHEET) env.DrawSheet();
-	if (drawMode == DM_MIRROR) env.DrawMirror();
-	if (drawMode == DM_FRONT) env.DrawFront();
-	if (drawMode == DM_DESIGN) env.DrawDesign();
-	if (drawMode == DM_WORLD) env.DrawDesign();
+	else if (drawMode == DM_MIRROR) env.DrawMirror(0);
+	else if (drawMode == DM_MIRROR_BACK) env.DrawMirror(1);
+	else if (drawMode == DM_FRONT) env.DrawFront();
+	else if (drawMode == DM_DESIGN) env.DrawDesign();
+	else {
+		std::cout << "Env::Draw() do not suppot mode " << drawMode << std::endl;
+		assert(0);
+	}
 }
 
 void Env::DrawSheet(){
@@ -309,7 +348,7 @@ void Env::DrawBack(){
 	glCallList(contents.list);
 }
 
-void Env::DrawMirror(){
+void Env::DrawMirror(int fb){
 	glMatrixMode(GL_PROJECTION);
 	Vec3d screen(0, config.hOff + config.h/2, config.d);
 	Vec2d size(config.w, config.h);
@@ -339,7 +378,7 @@ void Env::DrawMirror(){
 	for(int y=0; y<DIVY; ++y){
 		for(int x=0; x<DIVX	; ++x){
 			//	表示位置の虚像の表示
-			glBindTexture(GL_TEXTURE_2D, cell[y][x].texName);
+			glBindTexture(GL_TEXTURE_2D, cell[y][x].texName[fb]);
 			glBegin(GL_TRIANGLE_STRIP);
 			for(int i=0; i<4; ++i){
 				glTexCoord2dv(cell[y][x].texCoord[i]);
@@ -357,9 +396,62 @@ void Env::DrawDesign(){
 	glLoadIdentity();
 	gluPerspective(60.0, (GLfloat)windowSize.x/(GLfloat)windowSize.y, 0.01, 50.0);
 	glMatrixMode(GL_MODELVIEW);	
-	glMatrixMode(GL_MODELVIEW);
 	glLoadMatrixf(mouseView.inv());
-	if (drawMode== DM_WORLD) glMultMatrixd(projPose);
+
+	//	座標軸
+	glDisable(GL_LIGHTING);
+	glBegin(GL_LINES);
+	for(int i=0; i<3; ++i){
+		Vec3d v;
+		v[i] = 1;
+		glColor3dv(v);
+		glVertex3dv(Vec3d());
+		glVertex3dv(v);
+	}
+	glEnd();
+	glEnable(GL_LIGHTING);
+
+	//	映像の表示
+	glPushMatrix();
+		glMultMatrixd(projPose[0]);
+		DrawHalf(0);
+	glPopMatrix();
+	glPushMatrix();
+		glMultMatrixd(projPose[1]);
+		DrawHalf(1);
+	glPopMatrix();
+	
+	DrawHalfFront(0);
+	glMultMatrixd(Affined::Rot(Rad(180), 'Y'));	
+	DrawHalfFront(1);
+}
+void Env::DrawHalfFront(int fb){
+	glDisable(GL_LIGHTING);
+	glColor3d(1,1,1);
+	glPointSize(4);
+	glBegin(GL_POINTS);
+	glVertex3dv(cell[DIVY][0].outPosCenter);
+	glEnd();
+	glEnable(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, cell[DIVY][0].texName[fb]);
+	glBegin(GL_TRIANGLE_STRIP);
+	for(int i=0; i<4; ++i){
+		glTexCoord2dv(cell[DIVY][0].texCoord[i]);
+		glVertex3dv(cell[DIVY][0].outPos[i]);
+	}
+	glEnd();
+	glDisable(GL_TEXTURE_2D);
+	//	OpenGLのカメラの描画域の表示
+	glColor3d(1,1,1);
+	glBegin(GL_LINE_LOOP);
+	glVertex3dv(cell[DIVY][0].screen[0]);
+	glVertex3dv(cell[DIVY][0].screen[1]);
+	glVertex3dv(cell[DIVY][0].screen[3]);
+	glVertex3dv(cell[DIVY][0].screen[2]);
+	glEnd();				
+	glEnable(GL_LIGHTING);
+}
+void Env::DrawHalf(int fb){
 	//	描画
 	glDisable(GL_LIGHTING);
 	glBegin(GL_LINES);
@@ -403,7 +495,7 @@ void Env::DrawDesign(){
 			
 			//	表示位置の描画
 			glEnable(GL_TEXTURE_2D);
-			glBindTexture(GL_TEXTURE_2D, cell[y][x].texName);
+			glBindTexture(GL_TEXTURE_2D, cell[y][x].texName[fb]);
 			glBegin(GL_TRIANGLE_STRIP);
 			for(int i=0; i<4; ++i){
 				glTexCoord2dv(cell[y][x].texCoord[i]);

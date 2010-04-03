@@ -17,7 +17,7 @@
 using namespace Spr;
 
 
-double	CameraRotX = Rad(-90.0), CameraRotY = Rad(90.0), CameraZoom = 2.0;
+double	CameraRotX = Rad(0), CameraRotY = Rad(90.0), CameraZoom = 2.0;
 bool bLeftButton = false, bRightButton = false;
 int xlast, ylast;
 Affinef mouseView;
@@ -41,9 +41,9 @@ void __cdecl motion(int x, int y){
 	}
 	// 左ボタン
 	if(bLeftButton){
-		CameraRotY += xrel * 0.01;
+		CameraRotY -= xrel * 0.01;
 		CameraRotY = max(Rad(-180.0), min(CameraRotY, Rad(180.0)));
-		CameraRotX += yrel * 0.01;
+		CameraRotX -= yrel * 0.01;
 		CameraRotX = max(Rad(-90.0), min(CameraRotX, Rad(90.0)));
 	}
 	// 右ボタン
@@ -56,6 +56,7 @@ void __cdecl motion(int x, int y){
 		sin(CameraRotX),
 		cos(CameraRotX) * sin(CameraRotY));
 	mouseView.LookAtGL(Vec3f(), Vec3f(0.0f, 100.0f, 0.0f));
+	mouseView.Pos() += -10*mouseView.Ez();
 
 	glutPostRedisplay();
 }
@@ -89,7 +90,10 @@ void loadWindow(){
 		bFullScreen = false;
 	}
 }
-
+int IsBack(){
+	if (env.drawMode == Env::DM_MIRROR_BACK || env.drawMode == Env::DM_BACK) return 1;
+	return 0;
+}
 void keyboard(unsigned char key, int x, int y){
 	switch (key){
 		case '1':
@@ -99,21 +103,22 @@ void keyboard(unsigned char key, int x, int y){
 			std::cout << "1 Draw mirror" << std::endl;
 			break;
 		case '2':
+			env.drawMode = Env::DM_MIRROR_BACK;
+			saveWindow();
+			fullScreen();
+			std::cout << "1 Draw mirror back" << std::endl;
+			break;
+		case '3':
 			env.drawMode = Env::DM_FRONT;
 			saveWindow();
 			fullScreen();
 			std::cout << "2 Draw front" << std::endl;
 			break;
-		case '3':
+		case '4':
 			env.drawMode = Env::DM_BACK;
 			saveWindow();
 			fullScreen();
-			std::cout << "3 Draw back" << std::endl;
-			break;
-		case '4':
-			env.drawMode = Env::DM_WORLD;
-			loadWindow();
-			std::cout << "4 Draw world" << std::endl;
+			std::cout << "2 Draw back" << std::endl;
 			break;
 		case '5':
 			env.drawMode = Env::DM_DESIGN;
@@ -128,13 +133,13 @@ void keyboard(unsigned char key, int x, int y){
 
 		case 't':
 			env.cameraMode = Env::CM_TILE;
-			env.InitCamera();
+			env.InitCamera(IsBack());
 			contents.Draw();
 			std::cout << "t Tile camera" << std::endl;
 			break;
 		case 'w':
 			env.cameraMode = Env::CM_WINDOW;
-			env.InitCamera();
+			env.InitCamera(IsBack());
 			contents.Draw();
 			std::cout << "w World camera" << std::endl;
 			break;
@@ -177,23 +182,6 @@ static Affined afMove;
 void display(){
 	glutPostRedisplay();
 	contents.Draw(false);
-
-	//	テクスチャへのレンダリング
-//	afMove = Affined::Rot(Rad(0.3), 'y') * afMove;	
-	for(int y=0; y<DIVY; ++y){
-		for(int x=0; x<DIVX; ++x){
-			env.cell[y][x].BeforeDrawTex();
-			glMultMatrixd(afMove);
-			glCallList(contents.list);
-			env.cell[y][x].AfterDrawTex();
-		}
-	}	
-	//	メインのレンダリング
-	glViewport(0, 0, windowSize.x, windowSize.y);	//	ビューポートをWindow全体に
-
-	glClearColor(0,0,0,1);
-	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-	//	表示モードにあわせて表示
 	env.Draw();
 	glutSwapBuffers();
 }
