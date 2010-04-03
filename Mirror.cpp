@@ -180,7 +180,7 @@ void Cell::InitCamera(int fb){
 			view[fb].LookAtGL(Vec3d(outPlace*config.wall, view[fb].Pos().y, view[fb].Pos().z), Vec3d(0, 1, 0));
 		}else{
 			view[fb].Pos() = Vec3d(outPosCenter[fb].x, env.config.ceil-1, outPosCenter[fb].z);
-			Vec3d head = (Vec3d(view[fb].Pos().x, 0, view[fb].Pos().z) - env.projPose[fb].inv() * env.centerSeat).unit();
+			Vec3d head = (Vec3d(view[fb].Pos().x, 0, view[fb].Pos().z) - env.projPose[fb] * env.centerSeat).unit();
 			view[fb].LookAtGL(Vec3d(view[fb].Pos().x, env.config.ceil, view[fb].Pos().z), head);
 		}
 	}
