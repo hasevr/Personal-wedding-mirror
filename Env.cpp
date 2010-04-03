@@ -268,7 +268,8 @@ void Env::RenderTex(int fb){
 	}	
 }
 void Env::Draw(){
-	if (drawMode == DM_MIRROR || drawMode == DM_MIRROR_BACK) RenderTex(0);
+	if (drawMode == DM_MIRROR) RenderTex(0);
+	if (drawMode == DM_MIRROR_BACK) RenderTex(1);
 	if (drawMode == DM_DESIGN){
 		RenderTex(0);
 		RenderTex(1);
@@ -282,6 +283,7 @@ void Env::Draw(){
 	else if (drawMode == DM_MIRROR) DrawMirror(0);
 	else if (drawMode == DM_MIRROR_BACK) DrawMirror(1);
 	else if (drawMode == DM_FRONT) DrawFront();
+	else if (drawMode == DM_BACK) DrawBack();
 	else if (drawMode == DM_DESIGN) DrawDesign();
 	else {
 		std::cout << "Env::Draw() do not suppot mode " << drawMode << std::endl;

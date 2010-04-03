@@ -37,7 +37,7 @@ void Contents::DrawPhoto(){
 double dt = 0.066;
 void Contents::DrawShip(){
 	static unsigned startCount=1;
-	if (startCount < decals.size() && decals[startCount-1].time > 3){
+	if (startCount < decals.size() && decals[startCount-1].time > 4){
 		startCount++;
 	}
 	for(unsigned i=0; i< startCount; ++i){
