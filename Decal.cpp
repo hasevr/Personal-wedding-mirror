@@ -48,7 +48,7 @@ Posed Path::GetPose(double time){
 	}
 }
 
-Decal::Decal(){
+Decal::Decal(): texOffset(0,0), texScale(1,1){
 	id = 0;
 	sheetSize = Vec2d(4, 3)*4*2;
 	time = 0;
@@ -60,13 +60,13 @@ void Decal::Draw(){
 	glBindTexture(GL_TEXTURE_2D, id);
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST );
 	glBegin(GL_TRIANGLE_STRIP);
-	glTexCoord2d(1, 1);
+	glTexCoord2d(texOffset.x+texScale.x, texOffset.y+texScale.y);
 	glVertex3d(-sheetSize.x/2, -sheetSize.y/2, 0);
-	glTexCoord2d(0, 1);
+	glTexCoord2d(texOffset.x, texOffset.y+texScale.y);
 	glVertex3d( sheetSize.x/2, -sheetSize.y/2, 0);
-	glTexCoord2d(1, 0);
+	glTexCoord2d(texOffset.x+texScale.x, texOffset.y);
 	glVertex3d(-sheetSize.x/2,  sheetSize.y/2, 0);
-	glTexCoord2d(0, 0);
+	glTexCoord2d(texOffset.x, texOffset.y);
 	glVertex3d( sheetSize.x/2,  sheetSize.y/2, 0);
 	glEnd();
 	glDisable(GL_TEXTURE_2D);

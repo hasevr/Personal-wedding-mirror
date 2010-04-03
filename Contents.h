@@ -12,6 +12,7 @@ struct Contents{
 	};
 	ContentsMode mode;
 	Decals decals;
+	Decals backs;
 	std::vector<Path> paths;
 
 	unsigned cvTex;

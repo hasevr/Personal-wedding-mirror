@@ -15,6 +15,8 @@ struct Decal{
 	void Draw();
 	double time;
 	Affined posture;
+	Vec2d texOffset;
+	Vec2d texScale;
 };
 
 struct Decals:public std::vector<Decal>{

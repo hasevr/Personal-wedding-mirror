@@ -23,6 +23,8 @@ Contents::Contents():list(0){
 void Contents::LoadPhoto(){
 	decals.folderName = "texs";
 	decals.Load();
+	backs.folderName = "backs";
+	backs.Load();
 }
 void Contents::DrawPhoto(){
 	if (env.cameraMode == Env::CM_TILE){
@@ -43,11 +45,32 @@ void Contents::Step(double dt){
 		decals[i].time += dt;
 		decals[i].posture = paths[i%paths.size()].GetPose(decals[i].time);
 	}
+	if (backs.size()){
+		backs.front().texOffset.y += 0.02 * dt;
+	}
 }
 void Contents::DrawShip(){
+	glDisable(GL_LIGHTING);
 	for(Decals::iterator it = decals.begin(); it != decals.end(); ++it){
 		it->Draw();
 	}
+/*	for(Decals::iterator it = backs.begin(); it != backs.end(); ++it){
+		it->Draw();
+	}
+	*/
+	if (backs.size()){
+		double size = 80;
+		backs.front().sheetSize = Vec2d(size, size*100)*2;
+		backs.front().texScale = Vec2d(1, 100) * 0.3;
+		backs.front().posture = Affined::Trn(0,0,size);
+		backs.front().posture = Affined::Rot(Rad(-90), 'x') * backs.front().posture;
+		backs.front().Draw();
+		backs.front().posture = Affined::Rot(Rad(90), 'z') * backs.front().posture;
+		backs.front().Draw();
+		backs.front().posture = Affined::Rot(Rad(180), 'z') * backs.front().posture;
+		backs.front().Draw();
+	}
+	glEnable(GL_LIGHTING);
 }
 
 void Contents::DrawRandom(){
@@ -232,7 +255,7 @@ void Contents::Init(){
 		//-------------------------ëŒèÃê¸-----------------------
 
 		af.Pos() = Vec3d(xOff, yOff, -15);
-		af.LookAtGL(Vec3d(0, yOff+lookDiff, -10), Vec3d(0,1,0));
+		af.LookAtGL(Vec3d(0, yOff+lookDiff, -15), Vec3d(0,1,0));
 		paths.back().push_back(Key(0, 9/speed, Posed(af)));
 
 		af.Pos() = Vec3d(xOff, yOff, -60);
