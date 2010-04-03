@@ -123,7 +123,8 @@ void Contents::DrawTile(){
 void Contents::DrawCam(){
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	if (env.cameraMode == Env::CM_TILE){
-		double d = -5;
+		//	カメラ映像の拡大率（映像テクスチャの距離）
+		double d = -3.5;	
 		glColor3d(1,0,0);
 		glEnable(GL_TEXTURE_2D);
 		glBindTexture(GL_TEXTURE_2D, cvTex);
@@ -139,7 +140,7 @@ void Contents::DrawCam(){
 		glEnd();
 		glDisable(GL_TEXTURE_2D);
 	}else{
-		double d = 3;
+		double d = 5;
 		double x = 15.0/2;
 		double z = 20.0/2;
 		glColor3d(1,0,0);
@@ -147,13 +148,13 @@ void Contents::DrawCam(){
 		glBindTexture(GL_TEXTURE_2D, cvTex);
 		glBegin(GL_TRIANGLE_STRIP);
 		glTexCoord2dv(cvTexCoord[0]);
-		glVertex3d(-x, d, -z);
+		glVertex3d( x, d,  z);
 		glTexCoord2dv(cvTexCoord[1]);
 		glVertex3d( x, d, -z);
 		glTexCoord2dv(cvTexCoord[2]);
-		glVertex3d(-x, d, z);
+		glVertex3d(-x, d,  z);
 		glTexCoord2dv(cvTexCoord[3]);
-		glVertex3d( x, d, z);
+		glVertex3d(-x, d, -z);
 		glEnd();
 		glDisable(GL_TEXTURE_2D);		
 	}

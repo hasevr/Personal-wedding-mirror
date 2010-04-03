@@ -90,7 +90,7 @@ void Cell::Init(int xIn, int yIn){
 		outDir[i] = -inDir[i] + 2*(inDir[i] - (inDir[i]*mirror.normal)*mirror.normal);
 	}
 }
-void Cell::CalcPosition(double depth, int id, int fb){	//	頂点id がdepthになるようにする
+void Cell::CalcPosition(double depth, int id){	//	頂点id がdepthになるようにする
 	Config& config = env.config;
 	//	一番真ん中下に近いものの奥行きをdepthに設定する
 	//	頂点は、-x -y, +x, -y, -x +y, +x +y の順
@@ -115,7 +115,7 @@ void Cell::CalcPosition(double depth, int id, int fb){	//	頂点id がdepthになるよ
 	}else{
 		outPlace = 0;
 	}
-	outPosCenter[fb] = mirror.center + oc;
+	outPosCenter = mirror.center + oc;
 
 	for(int i=0; i<4; ++i){
 		Vec3d oc = outDir[i];
@@ -125,50 +125,55 @@ void Cell::CalcPosition(double depth, int id, int fb){	//	頂点id がdepthになるよ
 		double wallRight = config.wall - mirror.vertex[i].x;
 		if (outPlace == 1) oc *= wallRight/oc.x;
 		else if (outPlace == -1) oc *= wallLeft/oc.x;
-		outPos[fb][i] = mirror.vertex[i] + oc;
+		outPos[i] = mirror.vertex[i] + oc;
 	}
 
 	//	imagePos
 	for(int i=0; i<4; ++i){
-		imagePos[i] = outPos[fb][i] - (2*mirror.normal*(outPos[fb][i] - mirror.center)) * mirror.normal;
+		imagePos[i] = outPos[i] - (2*mirror.normal*(outPos[i] - mirror.center)) * mirror.normal;
 	}
 }
 void Cell::InitFrontCamera(int fb){
 	Config& config = env.config;
 
-	if (fb==0) view[fb].LookAtGL(Vec3d(0, 0, env.front.d), Vec3d(0, 1, 0));
-	else view[fb].LookAtGL(Vec3d(0, 0, -env.front.d), Vec3d(0, 1, 0));
+	view[fb].LookAtGL(Vec3d(0, 0, fb ? -1 : 1), Vec3d(0, 1, 0));
 	screenCenter = Vec3d(0, env.front.hOff + env.front.h/2, env.front.d);
 	screenSize = Vec2d(env.front.w, env.front.h);
 
-	texCoord[0] = Vec2d(0,0);
-	texCoord[1] = Vec2d(1,0);
-	texCoord[2] = Vec2d(0,1);
-	texCoord[3] = Vec2d(1,1);
+	texCoord[fb][0] = Vec2d(0,0);
+	texCoord[fb][1] = Vec2d(1,0);
+	texCoord[fb][2] = Vec2d(0,1);
+	texCoord[fb][3] = Vec2d(1,1);
 	projection[fb] = Affined::ProjectionGL(screenCenter, screenSize, 1, 10000);
 	
+	Vec3d localScreen[4];
+	Vec3d localOutPos[4];
 
 	localScreen[0] = Vec3d(-env.front.w/2, env.front.hOff, -env.front.d);
 	localScreen[1] = Vec3d( env.front.w/2, env.front.hOff, -env.front.d);
 	localScreen[2] = Vec3d(-env.front.w/2, env.front.hOff+env.front.h, -env.front.d);
 	localScreen[3] = Vec3d( env.front.w/2, env.front.hOff+env.front.h, -env.front.d);
-	outPosCenter[fb] = Vec3d();
+	outPosCenter = Vec3d();
 	for(int i=0; i<4; ++i){
 		localOutPos[i] = localScreen[i];
-		screen[i] = view[fb] * localScreen[i];
-		outPos[fb][i] = screen[i];
-		outPosCenter[fb] += outPos[fb][i];
+		screen[fb][i] = view[fb] * localScreen[i];
+		outPos[i] = screen[fb][i];
+		outPosCenter += outPos[i];
 	}
-	outPosCenter[fb] /= 4;
+	outPosCenter /= 4;
 	if (env.cameraMode == Env::CM_TILE){
 		view[fb] = Affined();
 	}
 }
 void Cell::InitCamera(int fb){
+	//	projPose系で計算する。
+	Vec3d localScreen[4];
+	Vec3d localOutPos[4];
 	Config& config = env.config;
 
 	if (env.cameraMode == Env::CM_WINDOW){
-		view[fb].Pos() = env.projPose[fb].inv().Pos();
+		//	視点をWorldの原点に設定
+		view[fb].Pos() = env.projPose.inv() * Vec3d(0,0,0);
 		if (outPlace){	//	壁だったら
 			view[fb].LookAtGL(Vec3d(outPlace*config.wall, view[fb].Pos().y, view[fb].Pos().z), Vec3d(0, 1, 0));
 		}else{
@@ -176,15 +181,17 @@ void Cell::InitCamera(int fb){
 		}
 	}else if (env.cameraMode == Env::CM_TILE){
 		if (outPlace){	//	壁だったら
-			view[fb].Pos() = Vec3d(outPlace*(config.wall-1), outPosCenter[fb].y, outPosCenter[fb].z);
+			view[fb].Pos() = Vec3d(outPlace*(config.wall-1), outPosCenter.y, outPosCenter.z);
 			view[fb].LookAtGL(Vec3d(outPlace*config.wall, view[fb].Pos().y, view[fb].Pos().z), Vec3d(0, 1, 0));
 		}else{
-			view[fb].Pos() = Vec3d(outPosCenter[fb].x, env.config.ceil-1, outPosCenter[fb].z);
-			Vec3d head = (Vec3d(view[fb].Pos().x, 0, view[fb].Pos().z) - env.projPose[fb] * env.centerSeat).unit();
+			view[fb].Pos() = Vec3d(outPosCenter.x, env.config.ceil-1, outPosCenter.z);
+			Vec3d cnt = env.centerSeat;
+			if (fb) cnt = Affined::Rot(Rad(180), 'y') * cnt;
+			Vec3d head = (Vec3d(view[fb].Pos().x, 0, view[fb].Pos().z) - env.projPose.inv() * cnt).unit();
 			view[fb].LookAtGL(Vec3d(view[fb].Pos().x, env.config.ceil, view[fb].Pos().z), head);
 		}
 	}
-	for(int i=0; i<4; ++i) localOutPos[i] = view[fb].inv() * outPos[fb][i];
+	for(int i=0; i<4; ++i) localOutPos[i] = view[fb].inv() * outPos[i];
 	Vec3d localOutPosU[4];
 	for(int i=0; i<4; ++i) localOutPosU[i] = localOutPos[i] / -localOutPos[i].z;
 
@@ -201,10 +208,12 @@ void Cell::InitCamera(int fb){
 	screenSize.x = limit[1].x - limit[0].x;
 	screenSize.y = limit[1].y - limit[0].y;
 	for(int i=0; i<4; ++i){
-		texCoord[i].x = (localOutPosU[i].x - limit[0].x) / screenSize.x;
-		texCoord[i].y = (localOutPosU[i].y - limit[0].y) / screenSize.y;
+		texCoord[fb][i].x = (localOutPosU[i].x - limit[0].x) / screenSize.x;
+		texCoord[fb][i].y = (localOutPosU[i].y - limit[0].y) / screenSize.y;
 	}
 	projection[fb] = Affined::ProjectionGL(screenCenter, screenSize, 1, 10000);
+
+
 	localScreen[0] = Vec3d(limit[0].x, limit[0].y, -1);
 	localScreen[1] = Vec3d(limit[1].x, limit[0].y, -1);
 	localScreen[2] = Vec3d(limit[1].x, limit[1].y, -1);
@@ -213,11 +222,13 @@ void Cell::InitCamera(int fb){
 	for(int i=0; i<4; ++i){
 		//	k * localScreen[i] * localNormal = localOutPos[0] * localNormal;
 		localScreen[i] *= (localOutPos[0] * localNormal) / (localScreen[i] * localNormal);
-		screen[i] = view[fb] * localScreen[i];
+		screen[fb][i] = view[fb] * localScreen[i];
 	}
 
 	if (env.cameraMode == Env::CM_WINDOW){
-		view[fb] = env.projPose[fb] * view[fb];
+		//	最後でviewをWorld系に
+		if (fb) view[fb] = Affined::Rot(Rad(180),'y') * env.projPose * view[fb];
+		else view[fb] = env.projPose * view[fb];
 	}else if (env.cameraMode == Env::CM_TILE){
 		view[fb] = Affined();
 	}

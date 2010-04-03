@@ -3,7 +3,7 @@
 
 Env env;
 
-void Env::InitMirror(int fb){
+void Env::InitMirror(){
 	int y;
 	for(y=0; y<DIVY; ++y){
 		for(int x=0; x<DIVX; ++x){
@@ -15,24 +15,25 @@ void Env::InitMirror(int fb){
 	}
 	double depth = config.d;
 	for(int y=0; y<DIVY; ++y){
-		cell[y][DIVX/2-1].CalcPosition(depth, 1, fb);
-		cell[y][DIVX/2].CalcPosition(depth, 0, fb);
+		cell[y][DIVX/2-1].CalcPosition(depth, 1);
+		cell[y][DIVX/2].CalcPosition(depth, 0);
 		for(int i=1; i<DIVX/2; ++i){
-			cell[y][DIVX/2-i-1].CalcPosition(cell[y][DIVX/2-i].mirror.vertex[0].z, 1, fb);
-			cell[y][DIVX/2+i].CalcPosition(cell[y][DIVX/2+i-1].mirror.vertex[1].z, 0, fb);
+			cell[y][DIVX/2-i-1].CalcPosition(cell[y][DIVX/2-i].mirror.vertex[0].z, 1);
+			cell[y][DIVX/2+i].CalcPosition(cell[y][DIVX/2+i-1].mirror.vertex[1].z, 0);
 		}
 		depth = cell[y][DIVX/2].mirror.vertex[2].z;
 	}
-	InitCamera(0);
 }
-void Env::InitCamera(int fb){
+void Env::InitCamera(){
 	int y;
 	for(y=0; y<DIVY; ++y){
 		for(int x=0; x<DIVX; ++x){
-			cell[y][x].InitCamera(fb);
+			cell[y][x].InitCamera(0);
+			cell[y][x].InitCamera(1);
 		}
 	}
-	cell[y][0].InitFrontCamera(fb);
+	cell[y][0].InitFrontCamera(0);
+	cell[y][0].InitFrontCamera(1);
 }
 
 void Env::InitSupport(){
@@ -238,14 +239,10 @@ void Env::Init(){
 	drawMode = DM_DESIGN;
 	front.Init();
 	config.Init();
-	projPose[0].Pos() = Vec3d(0, 0, -config.outY[1]+1.2);
-	projPose[1] = projPose[0];
-	projPose[1] = Affined::Rot(Rad(180), 'y') * projPose[1];
-	centerSeat = Vec3d(config.wall - 1, 0, 0);
-	InitMirror(0);
-	InitMirror(1);
-	InitCamera(0);
-	InitCamera(1);
+	projPose.Pos() = Vec3d(0, 0, -config.outY[1]+1.2);
+	centerSeat = Vec3d(config.wall, 0, 0);
+	InitMirror();
+	InitCamera();
 	InitSupport();
 	PlaceMirror();
 	PlaceSupport();
@@ -383,7 +380,7 @@ void Env::DrawMirror(int fb){
 			glBindTexture(GL_TEXTURE_2D, cell[y][x].texName[fb]);
 			glBegin(GL_TRIANGLE_STRIP);
 			for(int i=0; i<4; ++i){
-				glTexCoord2dv(cell[y][x].texCoord[i]);
+				glTexCoord2dv(cell[y][x].texCoord[fb][i]);
 				glVertex3dv(cell[y][x].imagePos[i]);
 			}
 			glEnd();
@@ -415,40 +412,43 @@ void Env::DrawDesign(){
 
 	//	映像の表示
 	glPushMatrix();
-		glMultMatrixd(projPose[0]);
-		DrawHalf(0);
+	glMultMatrixd(projPose);
+	DrawHalf(0);
 	glPopMatrix();
 	glPushMatrix();
-		glMultMatrixd(projPose[1]);
-		DrawHalf(1);
+	glMultMatrixd(Affined::Rot(Rad(180), 'y') * projPose);
+	DrawHalf(1);
 	glPopMatrix();
 	
+	glPushMatrix();
 	DrawHalfFront(0);
+	glMultMatrixd(Affined::Rot(Rad(180), 'y'));
 	DrawHalfFront(1);
+	glPopMatrix();
 }
 void Env::DrawHalfFront(int fb){
 	glDisable(GL_LIGHTING);
 	glColor3d(1,1,1);
 	glPointSize(4);
 	glBegin(GL_POINTS);
-	glVertex3dv(cell[DIVY][0].outPosCenter[fb]);
+	glVertex3dv(cell[DIVY][0].outPosCenter);
 	glEnd();
 	glEnable(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, cell[DIVY][0].texName[fb]);
 	glBegin(GL_TRIANGLE_STRIP);
 	for(int i=0; i<4; ++i){
-		glTexCoord2dv(cell[DIVY][0].texCoord[i]);
-		glVertex3dv(cell[DIVY][0].outPos[fb][i]);
+		glTexCoord2dv(cell[DIVY][0].texCoord[fb][i]);
+		glVertex3dv(cell[DIVY][0].outPos[i]);
 	}
 	glEnd();
 	glDisable(GL_TEXTURE_2D);
 	//	OpenGLのカメラの描画域の表示
 	glColor3d(1,1,1);
 	glBegin(GL_LINE_LOOP);
-	glVertex3dv(cell[DIVY][0].outPos[fb][0]);
-	glVertex3dv(cell[DIVY][0].outPos[fb][1]);
-	glVertex3dv(cell[DIVY][0].outPos[fb][3]);
-	glVertex3dv(cell[DIVY][0].outPos[fb][2]);
+	glVertex3dv(cell[DIVY][0].outPos[0]);
+	glVertex3dv(cell[DIVY][0].outPos[1]);
+	glVertex3dv(cell[DIVY][0].outPos[3]);
+	glVertex3dv(cell[DIVY][0].outPos[2]);
 	glEnd();				
 	glEnable(GL_LIGHTING);
 }
@@ -485,13 +485,13 @@ void Env::DrawHalf(int fb){
 			glPointSize(4);
 			glBegin(GL_POINTS);
 			glVertex3dv(cell[y][x].mirror.center);
-			glVertex3dv(cell[y][x].outPosCenter[fb]);
+			glVertex3dv(cell[y][x].outPosCenter);
 			glEnd();
 			//	鏡から、表示位置までの光線
 			glColor3dv(Vec3d((float)y/DIVY, (float)x/DIVX, 0.5));
 			glBegin(GL_LINES);
 			glVertex3dv(cell[y][x].mirror.center);
-			glVertex3dv(cell[y][x].outPosCenter[fb]);
+			glVertex3dv(cell[y][x].outPosCenter);
 			glEnd();
 			
 			//	表示位置の描画
@@ -499,14 +499,14 @@ void Env::DrawHalf(int fb){
 			glBindTexture(GL_TEXTURE_2D, cell[y][x].texName[fb]);
 			glBegin(GL_TRIANGLE_STRIP);
 			for(int i=0; i<4; ++i){
-				glTexCoord2dv(cell[y][x].texCoord[i]);
-				glVertex3dv(cell[y][x].outPos[fb][i]);
+				glTexCoord2dv(cell[y][x].texCoord[fb][i]);
+				glVertex3dv(cell[y][x].outPos[i]);
 			}
 			glEnd();
 			//	表示位置の虚像の表示
 			glBegin(GL_TRIANGLE_STRIP);
 			for(int i=0; i<4; ++i){
-				glTexCoord2dv(cell[y][x].texCoord[i]);
+				glTexCoord2dv(cell[y][x].texCoord[fb][i]);
 				glVertex3dv(cell[y][x].imagePos[i]);
 			}
 			glEnd();
@@ -514,7 +514,7 @@ void Env::DrawHalf(int fb){
 			glDisable(GL_TEXTURE_2D);
 			//	OpenGLのカメラの描画域の表示
 			glBegin(GL_LINE_LOOP);
-			for(int i=0; i<4; ++i) glVertex3dv(cell[y][x].screen[i]);
+			for(int i=0; i<4; ++i) glVertex3dv(cell[y][x].screen[fb][i]);
 			glEnd();				
 
 			glEnable(GL_LIGHTING);

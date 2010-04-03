@@ -40,8 +40,8 @@ struct Cell{
 	Vec3d outDirCenter;
 	Vec3d inDir[4];
 	Vec3d outDir[4];
-	Vec3d outPosCenter[2];
-	Vec3d outPos[2][4];
+	Vec3d outPosCenter;
+	Vec3d outPos[4];
 	Vec3d imagePos[4];
 	Vec3d inPos[4];
 	int outPlace;	//	-1: 左の壁, 0:天井, 1:右の壁
@@ -51,10 +51,8 @@ struct Cell{
 	Affined projection[2];
 	Vec3d screenCenter;
 	Vec2d screenSize;
-	Vec3d screen[4];
-	Vec3d localScreen[4];
-	Vec3d localOutPos[4];
-	Vec2d texCoord[4];
+	Vec3d screen[2][4];
+	Vec2d texCoord[2][4];
 	//	レンダリングバッファ
 	GLuint  texName[2];
 #ifdef USE_GLEW
@@ -64,12 +62,12 @@ struct Cell{
 	int	texSize;
 
 	void Init(int xIn, int yIn);
-	void CalcPosition(double depth, int id, int fb);	//	頂点id がdepthになるようにする
-	void InitCamera(int fb);	//	0:front	1:back
+	void CalcPosition(double depth, int id);	//	頂点id がdepthになるようにする
+	void InitCamera(int fb);
 	void InitFrontCamera(int fb);
 	void InitGL();
-	void BeforeDrawTex(int tex);
-	void AfterDrawTex(int tex);
+	void BeforeDrawTex(int fb);	//	0:front	1:back
+	void AfterDrawTex(int fb);
 };
 
 struct Plane{

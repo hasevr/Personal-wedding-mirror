@@ -11,7 +11,7 @@ struct Env{
 	Cell cell[DIVY+1][DIVX];
 	Support support;
 	std::vector<Sheet> sheets;
-	Affined projPose[2];	//	Worldから見たミラー用プロジェクタの位置、姿勢(ただし、projectionPitch の回転は含めない)
+	Affined projPose;	//	Worldから見たミラー用プロジェクタの位置、姿勢(ただし、projectionPitch の回転は含めない)
 	Vec3d centerSeat;
 
 	enum DrawMode{
@@ -30,8 +30,8 @@ struct Env{
 	};
 	CameraMode cameraMode;
 
-	void InitCamera(int fb);
-	void InitMirror(int fb);
+	void InitCamera();
+	void InitMirror();
 	void InitSupport();
 	void PlaceMirror();
 	void PlaceSupport();

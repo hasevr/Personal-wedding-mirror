@@ -129,15 +129,13 @@ void keyboard(unsigned char key, int x, int y){
 
 		case 't':
 			env.cameraMode = Env::CM_TILE;
-			env.InitCamera(0);
-			env.InitCamera(1);
+			env.InitCamera();
 			contents.Draw();
 			std::cout << "t Tile camera" << std::endl;
 			break;
 		case 'w':
 			env.cameraMode = Env::CM_WINDOW;
-			env.InitCamera(0);
-			env.InitCamera(1);
+			env.InitCamera();
 			contents.Draw();
 			std::cout << "w World camera" << std::endl;
 			break;
