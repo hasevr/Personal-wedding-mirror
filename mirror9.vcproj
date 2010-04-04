@@ -41,7 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="../../../Springhead2/include/;C:\Home\hase\C\Project\personal\hase\mirror\OpenCV\include"
+				AdditionalIncludeDirectories="../../../Springhead2/include/;OpenCV\include"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -65,7 +65,7 @@
 				AdditionalOptions="glew32.lib"
 				OutputFile="$(OutDir)/mirror.exe"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="../../../Springhead2/lib/win32;C:\Home\hase\C\Project\personal\hase\mirror\OpenCV\lib"
+				AdditionalLibraryDirectories="../../../Springhead2/lib/win32;OpenCV\lib"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile="$(OutDir)/mirror.pdb"
 				SubSystem="1"
