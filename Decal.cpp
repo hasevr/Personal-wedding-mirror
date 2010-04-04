@@ -7,14 +7,15 @@
 #include <io.h>
 #include <../src/Graphics/GRLoadBmp.h>
 
-Key::Key(){
+Key::Key():alpha(1){
 	duration = 0;
 	transition = 0;
 }
-Key::Key(double d, double t, Posed p){
+Key::Key(double d, double t, Posed p, double a){
 	duration = d;
 	transition = t;
 	posture = p;
+	alpha = a;
 }
 Posed Path::GetPose(double time){
 	double ratio=0;
@@ -47,8 +48,36 @@ Posed Path::GetPose(double time){
 		return it->posture * dp;
 	}
 }
+double Path::GetAlpha(double time){
+	double ratio=0;
+	iterator it;
+	for(it = begin(); it != end(); ++it){
+		if (time > it->duration){
+			time -= it->duration;
+			if (time > it->transition){
+				time -= it->transition;
+			}else{
+				ratio = time / it->transition;
+				if (it+1 == end()) ratio = 0;
+				break;
+			}
+		}else{
+			ratio = 0;
+			break;
+		}
+	}
+	if (it == end()){
+		return back().alpha;
+	}
+	if (ratio == 0){
+		return it->alpha;
+	}else{		
+		double da = (it+1)->alpha - it->alpha;
+		return it->alpha + da*ratio;
+	}
+}
 
-Decal::Decal(): texOffset(0,0), texScale(1,1){
+Decal::Decal(): texOffset(0,0), texScale(1,1), color(1,1,1,1){
 	id = 0;
 	sheetSize = Vec2d(4, 3)*4*2;
 	time = 0;
@@ -56,9 +85,10 @@ Decal::Decal(): texOffset(0,0), texScale(1,1){
 void Decal::Draw(){
 	glPushMatrix();
 	glMultMatrixd(posture);
-	glEnable(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, id);
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST );
+	glEnable(GL_TEXTURE_2D);
+	glColor4dv(color);
 	glBegin(GL_TRIANGLE_STRIP);
 	glTexCoord2d(texOffset.x+texScale.x, texOffset.y+texScale.y);
 	glVertex3d(-sheetSize.x/2, -sheetSize.y/2, 0);
@@ -84,6 +114,8 @@ bool Decal::Load(){
 	int ty = LoadBmpGetHeight(h);
 	int nc = LoadBmpGetBytePerPixel(h);
 	char* texbuf = DBG_NEW char[tx*ty*nc];
+	imageSize = Vec2d(tx, ty);
+	sheetSize.x = sheetSize.y/ty*tx;
 	LoadBmpGetBmp(h, texbuf);
 	LoadBmpRelease(h);
 	

@@ -219,6 +219,8 @@ int main(int argc, char* argv[]){
 	glutPositionWindow(50, 50);
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_NORMALIZE);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);	glEnable(GL_TEXTURE_2D);
 	setLight();
 	glutDisplayFunc(display);
 	glutReshapeFunc(reshape);

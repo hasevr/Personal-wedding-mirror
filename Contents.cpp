@@ -44,6 +44,7 @@ void Contents::Step(double dt){
 	for(unsigned i=0; i< startCount && i<decals.size(); ++i){
 		decals[i].time += dt;
 		decals[i].posture = paths[i%paths.size()].GetPose(decals[i].time);
+		decals[i].color.w = paths[i%paths.size()].GetAlpha(decals[i].time);
 	}
 	if (backs.size()){
 		backs.front().texOffset.y += 0.02 * dt;
@@ -54,12 +55,8 @@ void Contents::DrawShip(){
 	for(Decals::iterator it = decals.begin(); it != decals.end(); ++it){
 		it->Draw();
 	}
-/*	for(Decals::iterator it = backs.begin(); it != backs.end(); ++it){
-		it->Draw();
-	}
-	*/
 	if (backs.size()){
-		double size = 80;
+		double size = 120;
 		backs.front().sheetSize = Vec2d(size, size*100)*2;
 		backs.front().texScale = Vec2d(1, 100) * 0.3;
 		backs.front().posture = Affined::Trn(0,0,size);
@@ -235,9 +232,11 @@ void Contents::Init(){
 	for(int i=0; i<2; ++i){
 		Posed pose;
 		paths.push_back(Path());
-		pose.Pos() = frontDir * 600;
+		pose.Pos() = frontDir * 960 + Vec3d(i?40:-40, 0, 0) ;
+		paths.back().push_back(Key(0, 12/speed, pose, 0));
+		pose.Pos() = frontDir * 600 + Vec3d(i?20:-20, 0, 0) ;
 		paths.back().push_back(Key(0, 12/speed, pose));
-		pose.Pos() = frontDir * 240;
+		pose.Pos() = frontDir * 240 + Vec3d(i?-4:4, 0, 0) ;
 		paths.back().push_back(Key(0, 3/speed, pose));
 		double yOff = 6*2;
 		double xOff = (i==0 ? 10 : -10);
@@ -267,7 +266,9 @@ void Contents::Init(){
 		pose.Pos() = backDir * 240;
 		paths.back().push_back(Key(0, 12/speed, pose));
 		pose.Pos() = backDir * 600;
-		paths.back().push_back(Key(0, 0, pose));
+		paths.back().push_back(Key(0, 12/speed, pose));
+		pose.Pos() = backDir * 960;
+		paths.back().push_back(Key(1, 0, pose, 0));
 	}
 
 	//	ƒJƒƒ‰“ü—ÍŠÖŒW
@@ -287,7 +288,7 @@ void Contents::Init(){
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
-	glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL );
+	glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
 
 	//	‰ŠúƒRƒ“ƒeƒ“ƒc‚Ì•`‰æ

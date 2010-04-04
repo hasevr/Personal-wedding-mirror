@@ -266,6 +266,7 @@ void Env::RenderTex(int fb){
 	}	
 }
 void Env::Draw(){
+	glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	if (drawMode == DM_MIRROR) RenderTex(0);
 	if (drawMode == DM_MIRROR_BACK) RenderTex(1);
 	if (drawMode == DM_DESIGN){
@@ -273,6 +274,7 @@ void Env::Draw(){
 		RenderTex(1);
 	}
 	//	メインのレンダリングの準備
+	glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
 	glViewport(0, 0, windowSize.x, windowSize.y);	//	ビューポートをWindow全体に
 	glClearColor(0,0,0,1);
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);

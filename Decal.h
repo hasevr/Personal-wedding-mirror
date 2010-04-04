@@ -6,9 +6,11 @@
 using namespace Spr;
 
 struct Decal{
+	Vec4d color;
 	unsigned id;
 	std::string fileName;
 	Vec2d sheetSize;
+	Vec2d imageSize;
 	Decal();
 	bool Load();
 	void Release();
@@ -26,13 +28,15 @@ struct Decals:public std::vector<Decal>{
 };
 struct Key{
 	Posed posture;
+	double alpha;
 	double duration;
 	double transition;
 	Key();
-	Key(double d, double t, Posed p);
+	Key(double d, double t, Posed p, double a=1);
 };
 struct Path: public std::vector<Key>{
 	Posed GetPose(double time);
+	double GetAlpha(double time);
 };
 
 #endif
