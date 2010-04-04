@@ -1,30 +1,9 @@
 <?php
 date_default_timezone_set("Asia/Tokyo");
 echo "This is AddText.php: start!\n";
-
-
-function imagecopymerge_alpha($dst_im, $src_im, $dst_x, $dst_y, $src_x, $src_y, $src_w, $src_h, $pct){
-        $opacity=$pct;
-        // getting the watermark width
-        $w = imagesx($src_im);
-        // getting the watermark height
-        $h = imagesy($src_im);
-         
-        // creating a cut resource
-        $cut = imagecreatetruecolor($src_w, $src_h);
-        // copying that section of the background to the cut
-        imagecopy($cut, $dst_im, 0, 0, $dst_x, $dst_y, $src_w, $src_h);
-        // inverting the opacity
-        $opacity = 100 - $opacity;
-         
-        // placing the watermark now
-        imagecopy($cut, $src_im, 0, 0, $src_x, $src_y, $src_w, $src_h);
-        imagecopymerge($dst_im, $cut, $dst_x, $dst_y, $src_x, $src_y, $src_w, $src_h, $opacity);
-    }
-
-
 $dirname = "img";
-function AddText($fn, $mess){
+
+function AddText($fn, $mess, $pos){
 	$mess = trim($mess);
 	echo "AddText($fn, $mess);\n";
 	global $dirname;
@@ -39,7 +18,6 @@ function AddText($fn, $mess){
 	$size = 24;
 	$angle = 0;
 	$font = "/Windows/Fonts/HGRSMP.TTF";
-	$bottomMargin = $size*1.5;
 
 	$lines = explode("\n", $mess);
 	$lineH = 0;
@@ -48,8 +26,15 @@ function AddText($fn, $mess){
 		$lineH += $bbox[1]-$bbox[7];
 	}
 	$lineH /= count($lines);	//	per one line
-	//	行間の設定
-	$lineH += 0;	//$size/12;
+	
+	//	行間の設定、表示位置の設定
+	$lineH += 0;;
+	$margin = $size*1.5;
+	if ($pos=="t"){
+		$top = $margin-10;
+	}else{
+		$top = $y-10-$margin - count($lines)*$lineH;
+	}
 	for($i=0; $i<count($lines); $i++){
 		$line = $lines[$i];
 		$bbox = ImageTTFBBox($size, $angle, $font, $line);
@@ -59,8 +44,7 @@ function AddText($fn, $mess){
 		if ($txtW && $txtH){
 			echo "w:$txtW h:$txtH\n";
 			$tmp = imageCreateTruecolor($txtW+20, $txtH+20);
-			imagecopy($tmp, $im, 0, 0, $x/2-$txtW/2-10, 
-				$y - (count($lines)-$i)*$lineH-10 - $bottomMargin, 
+			imagecopy($tmp, $im, 0, 0, $x/2-$txtW/2-10, $top + $i*$lineH,
 				$txtW+20, $txtH+20);
 			$color = imagecolorallocateAlpha ($tmp, 0xFF, 0xFF, 0xFF, 0);
 			$back  = imagecolorallocateAlpha ($tmp, 0x00, 0x00, 0x00, 90);
@@ -72,9 +56,8 @@ function AddText($fn, $mess){
 			}
 			imageFilter($tmp, IMG_FILTER_GAUSSIAN_BLUR);
 			imageTTFText($tmp,$size,$angle,10, 10-$txtT, $color, $font, $line);
-			imagecopy($im, $tmp, $x/2-$txtW/2-10, 
-				$y - (count($lines)-$i)*$lineH-10 - $bottomMargin, 
-				0,0, $txtW+20, $txtH+20);
+			imagecopy($im, $tmp, $x/2-$txtW/2-10, $top + $i*$lineH, 0,0,
+				$txtW+20, $txtH+20);
 			imageDestroy($tmp);
 		}
 	}
@@ -91,13 +74,20 @@ for($i=0;; $i++){
 	if (!($find === FALSE) || $i == count($txt)){
 		$n = substr($line, 0, $find);
 		$m = substr($line, $find+1);
+		$find = strpos($m, "\t");
+		$key = substr($m, 0,1);
+		$pos = "b";
+		if ($key=="u" || $key=="t" || $key=="d" || $key=="b"){
+			if ($key=="u" || $key=="t") $pos = "t";
+			$m = substr($m, $find+1);
+		}
 		if (is_numeric($n) || $i == count($txt)){
 			if ($mess){
 				echo "num:$num mess: $mess";
 				$dir = scandir($dirname);
 				foreach($dir as $fn){
 			 		if (substr($fn,0,2) == $num){
-				 		AddText("$fn", $mess);
+				 		AddText("$fn", $mess, $pos);
 				 		break;
 				 	}
 			 	}
