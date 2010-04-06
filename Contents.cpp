@@ -1,9 +1,6 @@
 #include "Contents.h"
 #include "Env.h"
-
-#ifdef USE_GLEW
-#include <GL/glew.h>
-#endif
+#include <windows.h>
 
 
 Contents contents;
@@ -291,6 +288,7 @@ void Contents::Capture(char* src, unsigned len){
 	for(int y=0; y<h; ++y){
 		memcpy(cameraTexBuf[y], src + (y*wIn*2), w*2);
 	}
+	Sleep(100);
 }
 void Contents::UpdateCameraTex(){
 	//	texBuf

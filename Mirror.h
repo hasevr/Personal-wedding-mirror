@@ -1,5 +1,4 @@
 #include <Springhead.h>
-#include <gl/glew.h>
 #include <gl/glut.h>
 #ifndef MIRROR_H
 #define MIRROR_H

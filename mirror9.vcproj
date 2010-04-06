@@ -195,14 +195,6 @@
 			>
 		</File>
 		<File
-			RelativePath=".\DShowCap.cpp"
-			>
-		</File>
-		<File
-			RelativePath=".\DShowCap.h"
-			>
-		</File>
-		<File
 			RelativePath=".\Env.cpp"
 			>
 		</File>
