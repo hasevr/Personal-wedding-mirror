@@ -1,6 +1,5 @@
 #include "Contents.h"
 #include "Env.h"
-#include <windows.h>
 
 
 Contents contents;
@@ -129,14 +128,13 @@ void Contents::DrawTile(){
 	glDisable(GL_TEXTURE_2D);
 }
 void Contents::DrawCam(){
+	glColor3d(1,1,1);
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	UpdateCameraTex();
+	glEnable(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, cvTex);
 	if (env.cameraMode == Env::CM_TILE){
 		//	カメラ映像の拡大率（映像テクスチャの距離）
 		double d = -3.5;	
-		glColor3d(1,0,0);
-		glEnable(GL_TEXTURE_2D);
-		glBindTexture(GL_TEXTURE_2D, cvTex);
 		glBegin(GL_TRIANGLE_STRIP);
 		glTexCoord2dv(cvTexCoord[0]);
 		glVertex3d( 1,-1*0.75, d);
@@ -147,14 +145,10 @@ void Contents::DrawCam(){
 		glTexCoord2dv(cvTexCoord[3]);
 		glVertex3d(-1, 1*0.75, d);
 		glEnd();
-		glDisable(GL_TEXTURE_2D);
 	}else{
 		double d = 5;
 		double x = 15.0/2;
 		double z = 20.0/2;
-		glColor3d(1,0,0);
-		glEnable(GL_TEXTURE_2D);
-		glBindTexture(GL_TEXTURE_2D, cvTex);
 		glBegin(GL_TRIANGLE_STRIP);
 		glTexCoord2dv(cvTexCoord[0]);
 		glVertex3d( x, d,  z);
@@ -165,8 +159,8 @@ void Contents::DrawCam(){
 		glTexCoord2dv(cvTexCoord[3]);
 		glVertex3d(-x, d, -z);
 		glEnd();
-		glDisable(GL_TEXTURE_2D);		
 	}
+	glDisable(GL_TEXTURE_2D);		
 }
 
 void Contents::Draw(bool isInit){
@@ -275,24 +269,32 @@ void Contents::Release(){
 void Contents::Capture(char* src, unsigned len){
 	if (!cvTex) return;
 	if (mode!=CO_CAM) return;
-	int wIn=0, hIn=0;
-	if (len==640*480*2){ wIn=640; hIn=480;}
-	else if (len==320*240*2){ wIn=320; hIn=240;}
-	else {
-		DSTR << "unknown size: len: " << len << " = 640*" << len/640 
-			<< " = 400*" << len/400 << 
-			" = 768*" << len/768 << std::endl;
+	static int wIn=0, hIn=0, w, h, nc;
+	if (wIn==0){
+		nc = 3;
+		if (len==640*480*nc){ wIn=640; hIn=480;}
+		else if (len==320*240*nc){ wIn=320; hIn=240;}
+		else {
+			DSTR << "unknown size: len: " << len << " = 640*" << len/640 
+				<< " = 400*" << len/400 << 
+				" = 768*" << len/768 << std::endl;
+		}
+		w = min(wIn, (int)CVTEX_SIZE);
+		h = min(hIn, (int)CVTEX_SIZE);
+		double tx = (double)w/CVTEX_SIZE;
+		double ty =(double)h/CVTEX_SIZE;
+		cvTexCoord[3] = Vec2d(0, ty);
+		cvTexCoord[2] = Vec2d(tx, ty);
+		cvTexCoord[1] = Vec2d(0, 0);
+		cvTexCoord[0] = Vec2d(tx, 0);
+		DSTR << "size:" << wIn << "x" << hIn << std::endl;
 	}
-	int w = min(wIn, (int)CVTEX_SIZE);
-	int h = min(hIn, (int)CVTEX_SIZE);
 	for(int y=0; y<h; ++y){
-		memcpy(cameraTexBuf[y], src + (y*wIn*2), w*2);
+		memcpy(cameraTexBuf[y], src + (y*wIn*nc), w*nc);
 	}
-	Sleep(100);
 }
 void Contents::UpdateCameraTex(){
 	//	texBuf
 	glBindTexture( GL_TEXTURE_2D, cvTex );
-//	glTexImage2D( GL_TEXTURE_2D, 0, GL_RGB, CVTEX_SIZE, CVTEX_SIZE, 0, GL_BGR_EXT, GL_UNSIGNED_SHORT_5_6_5_REV, buf);
 	glTexImage2D( GL_TEXTURE_2D, 0, GL_RGB, CVTEX_SIZE, CVTEX_SIZE, 0, GL_BGR_EXT, GL_UNSIGNED_BYTE, cameraTexBuf);
 }

@@ -143,14 +143,6 @@ bool DShowCap::Init(char* cameraName){
 	CoCreateInstance(CLSID_SampleGrabber, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (LPVOID *)&pF);
 	pF->QueryInterface(IID_ISampleGrabber, (void **)&pSGrab);
 
-	// 4-2. メディアタイプの設定
-	AM_MEDIA_TYPE mt;
-	ZeroMemory(&mt, sizeof(AM_MEDIA_TYPE));
-	mt.majortype = MEDIATYPE_Video; // Sample Grabber の入力ピン(Capture Device の出力ピン)はUYVY
-	mt.subtype = MEDIASUBTYPE_UYVY;     
-	mt.formattype = FORMAT_VideoInfo;
-	pSGrab->SetMediaType(&mt);
-
 	// 4-3. フィルタグラフへ追加
 	pGraph->AddFilter(pF, L"Grabber");
 
@@ -159,10 +151,10 @@ bool DShowCap::Init(char* cameraName){
 	//        ↑A   ↑B     ↑C
 	IPin *pSrcOut = GetPin(pSrc, PINDIR_OUTPUT);	//A
 	IPin *pSGrabIN = GetPin(pF, PINDIR_INPUT);    // B
-	IPin *pSGrabOut = GetPin(pF, PINDIR_OUTPUT);  // C
+//	IPin *pSGrabOut = GetPin(pF, PINDIR_OUTPUT);  // C
 
 	pGraph->Connect(pSrcOut, pSGrabIN);
-	pGraph->Render(pSGrabOut);
+//	pGraph->Render(pSGrabOut);
 
 	// 4-5. グラバのモードを適切に設定
 	pSGrab->SetBufferSamples(FALSE);
@@ -170,7 +162,7 @@ bool DShowCap::Init(char* cameraName){
 	pSGrab->SetCallback(&callBack, 1);  // 第2引数でコールバックを指定 (0:SampleCB, 1:BufferCB)
 
 	// ディスプレイへ
-	pBuilder->RenderStream( &PIN_CATEGORY_PREVIEW, &MEDIATYPE_Video, pSrc, NULL, NULL );
+//	pBuilder->RenderStream( &PIN_CATEGORY_PREVIEW, &MEDIATYPE_Video, pSrc, NULL, NULL );
 
 	// 5. キャプチャ開始
 	pGraph->QueryInterface(IID_IMediaControl, (void **)&pMediaControl);

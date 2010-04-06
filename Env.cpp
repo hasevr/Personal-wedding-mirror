@@ -266,6 +266,7 @@ void Env::RenderTex(int fb){
 	}	
 }
 void Env::Draw(){
+	if (contents.mode == Contents::CO_CAM) contents.UpdateCameraTex();
 	glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	if (drawMode == DM_MIRROR) RenderTex(0);
 	if (drawMode == DM_MIRROR_BACK) RenderTex(1);

@@ -15,7 +15,7 @@ struct Contents{
 
 	unsigned cvTex;
 	enum CVTEXSIZE {CVTEX_SIZE = 1024};
-	char cameraTexBuf[CVTEX_SIZE][CVTEX_SIZE][3];
+	unsigned char cameraTexBuf[CVTEX_SIZE][CVTEX_SIZE][3];
 	unsigned list;
 	Vec2d cvTexCoord[4];
 
