@@ -1,23 +1,13 @@
 #include "Contents.h"
 #include "Env.h"
-#include <cv.h>
-#include <cxcore.h>
-#include <highgui.h>
-#pragma comment(lib, "libcv200.dll.a") 
-#pragma comment(lib, "libcxcore200.dll.a") 
-#pragma comment(lib, "libhighgui200.dll.a") 
-#pragma comment(lib, "libhighgui200.dll.a") 
 
 #ifdef USE_GLEW
 #include <GL/glew.h>
 #endif
-#include <GL/glut.h>
 
 
 Contents contents;
 Contents::Contents():list(0){
-	cvCam = NULL;
-	cvImg = NULL;
 	cvTex = 0;
 }
 void Contents::LoadPhoto(){
@@ -143,6 +133,7 @@ void Contents::DrawTile(){
 }
 void Contents::DrawCam(){
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	UpdateCameraTex();
 	if (env.cameraMode == Env::CM_TILE){
 		//	カメラ映像の拡大率（映像テクスチャの距離）
 		double d = -3.5;	
@@ -182,7 +173,6 @@ void Contents::DrawCam(){
 }
 
 void Contents::Draw(bool isInit){
-	if (mode==CO_CAM) Capture();
 	if (!isInit && (mode==CO_CAM || mode==CO_RANDOM || mode==CO_CEIL || mode==CO_TILE) ) 
 		return;
 
@@ -271,19 +261,6 @@ void Contents::Init(){
 		paths.back().push_back(Key(1, 0, pose, 0));
 	}
 
-	//	カメラ入力関係
-	cvCam = cvCreateCameraCapture(CV_CAP_ANY);       //カメラ初期化
-	if (cvCam) {
-		cvImg = cvQueryFrame(cvCam);
-		int h = min(cvImg->height, CVTEX_SIZE);
-		int w = min(cvImg->width, CVTEX_SIZE);
-		cvTexCoord[3] = Vec2d();
-		cvTexCoord[2] = Vec2d((double)cvImg->width/CVTEX_SIZE, 0);
-		cvTexCoord[1] = Vec2d(0, (double)cvImg->height/CVTEX_SIZE);
-		cvTexCoord[0] = Vec2d(cvTexCoord[2].x, cvTexCoord[1].y);
-	}else{
-		std::cout << "カメラが見つかりません" << std::endl;
-	}
 	glGenTextures( 1, &cvTex);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
@@ -296,21 +273,28 @@ void Contents::Init(){
 	Draw(true);
 }
 void Contents::Release(){
-	cvReleaseCapture(&cvCam);
 	decals.Release();
-	cvCam = NULL;
 }
-void Contents::Capture(){
-	if (cvCam) cvImg = cvQueryFrame(cvCam);
-	static char buf[CVTEX_SIZE][CVTEX_SIZE][3];
-	if (cvCam) {
-		int h = min(cvImg->height, CVTEX_SIZE);
-		int w = min(cvImg->width, CVTEX_SIZE);
-		for(int y=0; y<h; ++y){
-			memcpy(buf[y], cvImg->imageData + (y*cvImg->width*3), w*3);
-		}
+void Contents::Capture(char* src, unsigned len){
+	if (!cvTex) return;
+	if (mode!=CO_CAM) return;
+	int wIn=0, hIn=0;
+	if (len==640*480*2){ wIn=640; hIn=480;}
+	else if (len==320*240*2){ wIn=320; hIn=240;}
+	else {
+		DSTR << "unknown size: len: " << len << " = 640*" << len/640 
+			<< " = 400*" << len/400 << 
+			" = 768*" << len/768 << std::endl;
 	}
+	int w = min(wIn, (int)CVTEX_SIZE);
+	int h = min(hIn, (int)CVTEX_SIZE);
+	for(int y=0; y<h; ++y){
+		memcpy(cameraTexBuf[y], src + (y*wIn*2), w*2);
+	}
+}
+void Contents::UpdateCameraTex(){
 	//	texBuf
 	glBindTexture( GL_TEXTURE_2D, cvTex );
-	glTexImage2D( GL_TEXTURE_2D, 0, GL_RGB, CVTEX_SIZE, CVTEX_SIZE, 0, GL_BGR_EXT, GL_UNSIGNED_BYTE, buf);
+//	glTexImage2D( GL_TEXTURE_2D, 0, GL_RGB, CVTEX_SIZE, CVTEX_SIZE, 0, GL_BGR_EXT, GL_UNSIGNED_SHORT_5_6_5_REV, buf);
+	glTexImage2D( GL_TEXTURE_2D, 0, GL_RGB, CVTEX_SIZE, CVTEX_SIZE, 0, GL_BGR_EXT, GL_UNSIGNED_BYTE, cameraTexBuf);
 }

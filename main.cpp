@@ -1,12 +1,12 @@
 #include "Env.h"
 #include "Mirror.h"
 #include "Contents.h"
+#include "DShowCap.h"
 
 
 #ifdef USE_GLEW
 #include <GL/glew.h>
 #endif
-#include <GL/glut.h>
 #include <string>
 #include <sstream>
 #include <fstream>
@@ -167,6 +167,7 @@ void keyboard(unsigned char key, int x, int y){
 		case 0x1b:
 		case 'q':
 			contents.Release();
+			dshowCap.Release();
 			exit(0);
 			break;
 	}
@@ -212,6 +213,9 @@ void setLight() {
 
 
 int main(int argc, char* argv[]){
+	//	"IP Camera [JPEG/MJPEG]", "Logicool Qcam Pro 9000"
+	dshowCap.Init("IP Camera [JPEG/MJPEG]");
+
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
 	glutCreateWindow("mirror");
@@ -236,3 +240,5 @@ int main(int argc, char* argv[]){
 
 	glutMainLoop();
 }
+
+

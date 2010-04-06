@@ -1,9 +1,5 @@
 #include "Decal.h"
 #include "Env.h"
-#ifdef USE_GLEW
-#include <GL/glew.h>
-#endif
-#include <GL/glut.h>
 #include <io.h>
 #include <../src/Graphics/GRLoadBmp.h>
 

@@ -1,6 +1,4 @@
 #include "Decal.h"
-#include <cxcore.h>
-struct CvCapture;
 struct Contents{
 	enum ContentsMode{
 		CO_CAM,
@@ -16,16 +14,16 @@ struct Contents{
 	std::vector<Path> paths;
 
 	unsigned cvTex;
-	unsigned list;
-	CvCapture* cvCam;
-	IplImage* cvImg;
-	Vec2d cvTexCoord[4];
 	enum CVTEXSIZE {CVTEX_SIZE = 1024};
+	char cameraTexBuf[CVTEX_SIZE][CVTEX_SIZE][3];
+	unsigned list;
+	Vec2d cvTexCoord[4];
 
 	Contents();
 	void Draw(bool isInit = true);
 	void Release();
-	void Capture();
+	void Capture(char* buf, unsigned len);
+	void UpdateCameraTex();
 	void Init();
 	void DrawRandom();
 	void DrawCeil();

@@ -41,7 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="../../../Springhead2/include/;OpenCV\include"
+				AdditionalIncludeDirectories="../../../Springhead2/include/;./DShow"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -192,6 +192,14 @@
 		</File>
 		<File
 			RelativePath=".\Decal.h"
+			>
+		</File>
+		<File
+			RelativePath=".\DShowCap.cpp"
+			>
+		</File>
+		<File
+			RelativePath=".\DShowCap.h"
 			>
 		</File>
 		<File
