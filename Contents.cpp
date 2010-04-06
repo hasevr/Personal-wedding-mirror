@@ -266,7 +266,7 @@ void Contents::Init(){
 void Contents::Release(){
 	decals.Release();
 }
-void Contents::Capture(char* src, unsigned len){
+void Contents::Capture(unsigned char* src, unsigned len){
 	if (!cvTex) return;
 	if (mode!=CO_CAM) return;
 	static int wIn=0, hIn=0, w, h, nc;

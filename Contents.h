@@ -22,7 +22,7 @@ struct Contents{
 	Contents();
 	void Draw(bool isInit = true);
 	void Release();
-	void Capture(char* buf, unsigned len);
+	void Capture(unsigned char* buf, unsigned len);
 	void UpdateCameraTex();
 	void Init();
 	void DrawRandom();

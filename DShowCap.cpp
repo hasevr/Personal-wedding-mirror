@@ -25,12 +25,17 @@ STDMETHODIMP CMySampleGrabberCB::QueryInterface(REFIID riid, void ** ppv){
 }
 STDMETHODIMP CMySampleGrabberCB::SampleCB( double SampleTime, IMediaSample * pSample ){
 	DSTR << "CMySampleGrabberCB::SampleCB( time:" << SampleTime << "); called." << std::endl;
+	BYTE* pBuf;
+	HRESULT hr = pSample->GetPointer(&pBuf);
+	if (hr==S_OK){
+		contents.Capture(pBuf, pSample->GetSize());
+	}
 	return S_OK;
 }
 
 STDMETHODIMP CMySampleGrabberCB::BufferCB( double dblSampleTime, BYTE * pBuffer, long lBufferSize ){
 //	DSTR << "CMySampleGrabberCB::BufferCB( time:" << dblSampleTime << " len:" << lBufferSize << "); called." << std::endl;
-	contents.Capture((char*)pBuffer, lBufferSize);
+	contents.Capture(pBuffer, lBufferSize);
 	return S_OK;
 }
 
@@ -148,18 +153,17 @@ bool DShowCap::Init(char* cameraName){
 
 	// 4-4. サンプルグラバの接続
 	// [pSrc](o) -> (i)[pF](o) -> [VideoRender]
-	//        ↑A   ↑B     ↑C
-	IPin *pSrcOut = GetPin(pSrc, PINDIR_OUTPUT);	//A
-	IPin *pSGrabIN = GetPin(pF, PINDIR_INPUT);    // B
-//	IPin *pSGrabOut = GetPin(pF, PINDIR_OUTPUT);  // C
-
+	//       ↑A     ↑B       ↑C
+	IPin *pSrcOut = GetPin(pSrc, PINDIR_OUTPUT);	// A
+	IPin *pSGrabIN = GetPin(pF, PINDIR_INPUT);		// B
+//	IPin *pSGrabOut = GetPin(pF, PINDIR_OUTPUT);	// C
 	pGraph->Connect(pSrcOut, pSGrabIN);
 //	pGraph->Render(pSGrabOut);
 
 	// 4-5. グラバのモードを適切に設定
 	pSGrab->SetBufferSamples(FALSE);
 	pSGrab->SetOneShot(FALSE);
-	pSGrab->SetCallback(&callBack, 1);  // 第2引数でコールバックを指定 (0:SampleCB, 1:BufferCB)
+	pSGrab->SetCallback(&callBack, 0);  // 第2引数でコールバックを指定 (0:SampleCB, 1:BufferCB)
 
 	// ディスプレイへ
 //	pBuilder->RenderStream( &PIN_CATEGORY_PREVIEW, &MEDIATYPE_Video, pSrc, NULL, NULL );
