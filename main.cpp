@@ -124,6 +124,10 @@ void keyboard(unsigned char key, int x, int y){
 			std::cout << "6 Draw sheet" << std::endl;
 			break;
 
+		case '0':
+			std::cout << "0 Show the property sheet of the camera" << std::endl;
+			dshowCap.Prop();
+			break;
 		case 't':
 			env.cameraMode = Env::CM_TILE;
 			env.InitCamera();

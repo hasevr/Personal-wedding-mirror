@@ -24,18 +24,20 @@ STDMETHODIMP CMySampleGrabberCB::QueryInterface(REFIID riid, void ** ppv){
 	return E_NOINTERFACE;
 }
 STDMETHODIMP CMySampleGrabberCB::SampleCB( double SampleTime, IMediaSample * pSample ){
-	DSTR << "CMySampleGrabberCB::SampleCB( time:" << SampleTime << "); called." << std::endl;
-	BYTE* pBuf;
-	HRESULT hr = pSample->GetPointer(&pBuf);
-	if (hr==S_OK){
-		contents.Capture(pBuf, pSample->GetSize());
+	//DSTR << "CMySampleGrabberCB::SampleCB( time:" << SampleTime << "); called." << std::endl;
+	if (contents.mode == Contents::CO_CAM){
+		BYTE* pBuf;
+		HRESULT hr = pSample->GetPointer(&pBuf);
+		if (hr==S_OK){
+			contents.Capture(pBuf, pSample->GetSize());
+		}
 	}
 	return S_OK;
 }
 
 STDMETHODIMP CMySampleGrabberCB::BufferCB( double dblSampleTime, BYTE * pBuffer, long lBufferSize ){
 //	DSTR << "CMySampleGrabberCB::BufferCB( time:" << dblSampleTime << " len:" << lBufferSize << "); called." << std::endl;
-	contents.Capture(pBuffer, lBufferSize);
+	if (contents.mode == Contents::CO_CAM) contents.Capture(pBuffer, lBufferSize);
 	return S_OK;
 }
 
@@ -63,12 +65,7 @@ DShowCap::DShowCap(){
 	pBuilder = NULL;
 	pGraph = NULL;
 }
-bool DShowCap::Init(char* cameraName){
-	CoInitialize(NULL);
-
-	// 1. フィルタグラフ作成
-	CoCreateInstance(CLSID_FilterGraph, NULL, CLSCTX_INPROC, IID_IGraphBuilder, (void **)&pGraph);
-
+IBaseFilter* DShowCap::FindSrc(char* cameraName){
 	// 2. システムデバイス列挙子を作成
 	ICreateDevEnum *pDevEnum = NULL;
 	CoCreateInstance(CLSID_SystemDeviceEnum, NULL, CLSCTX_INPROC, IID_ICreateDevEnum, (void **)&pDevEnum);
@@ -105,9 +102,11 @@ bool DShowCap::Init(char* cameraName){
 	}
 	pClassEnum->Release();
 	pDevEnum->Release();
-	if (!pSrc) return false;
-
-	// フィルタを列挙し、それらのプロパティ ページを表示する。
+	return pSrc;
+}
+void DShowCap::Prop(){
+	if (!pSrc) return;
+	// フィルタのプロパティページを表示する。
 	ISpecifyPropertyPages *pSpecify;
 	HRESULT hr = pSrc->QueryInterface(IID_ISpecifyPropertyPages, (void **)&pSpecify);
 	if (SUCCEEDED(hr)) {
@@ -134,14 +133,23 @@ bool DShowCap::Init(char* cameraName){
 		CoTaskMemFree(caGUID.pElems);
 		if (FilterInfo.pGraph) FilterInfo.pGraph->Release();
 	}
+}
+
+bool DShowCap::Init(char* cameraName){
+	CoInitialize(NULL);
+
+	// 1. フィルタグラフ作成
+	CoCreateInstance(CLSID_FilterGraph, NULL, CLSCTX_INPROC, IID_IGraphBuilder, (void **)&pGraph);
+
+	// 2. ソースフィルタ（カメラ）の取得
+	pSrc = FindSrc(cameraName);
 	pGraph->AddFilter(pSrc, L"Video Capture");
 
 	// 3. キャプチャビルダの作成
 	CoCreateInstance(CLSID_CaptureGraphBuilder2, NULL, CLSCTX_INPROC, IID_ICaptureGraphBuilder2, (void **)&pBuilder);
-	pBuilder->SetFiltergraph(pGraph);
-  
+	pBuilder->SetFiltergraph(pGraph);  
 
-	// 4. 一枚撮る
+	// 4. コールバックの設定
 	// 4-1. サンプルグラバの生成
 	IBaseFilter *pF = NULL;
 	ISampleGrabber *pSGrab;

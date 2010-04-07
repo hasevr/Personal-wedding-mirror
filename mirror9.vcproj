@@ -41,7 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="../../../Springhead2/include/;./DShow"
+				AdditionalIncludeDirectories="../../../Springhead2/include"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -65,7 +65,7 @@
 				AdditionalOptions="glew32.lib"
 				OutputFile="$(OutDir)/mirror.exe"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="../../../Springhead2/lib/win32;OpenCV\lib"
+				AdditionalLibraryDirectories="../../../Springhead2/lib/win32"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile="$(OutDir)/mirror.pdb"
 				SubSystem="1"
@@ -120,7 +120,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="&quot;../../../../include/win32&quot;;&quot;../../../../include&quot;;&quot;../../../../src&quot;"
+				AdditionalIncludeDirectories="../../../Springhead2/include"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
 				RuntimeLibrary="0"
 				UsePrecompiledHeader="0"
@@ -143,7 +143,7 @@
 				AdditionalOptions="glew32.lib"
 				OutputFile="$(OutDir)/mirror.exe"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories="&quot;../../../..\lib\win32&quot;"
+				AdditionalLibraryDirectories="../../../Springhead2/lib/win32"
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				OptimizeReferences="2"

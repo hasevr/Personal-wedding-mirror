@@ -164,7 +164,7 @@ void Contents::DrawCam(){
 }
 
 void Contents::Draw(bool isInit){
-	if (!isInit && (mode==CO_CAM || mode==CO_RANDOM || mode==CO_CEIL || mode==CO_TILE) ) 
+	if (!isInit && (mode==CO_RANDOM || mode==CO_CEIL || mode==CO_TILE) ) 
 		return;
 
 	glNewList(list, GL_COMPILE);
@@ -268,7 +268,6 @@ void Contents::Release(){
 }
 void Contents::Capture(unsigned char* src, unsigned len){
 	if (!cvTex) return;
-	if (mode!=CO_CAM) return;
 	static int wIn=0, hIn=0, w, h, nc;
 	if (wIn==0){
 		nc = 3;

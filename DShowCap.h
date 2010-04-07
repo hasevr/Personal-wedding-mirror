@@ -22,6 +22,8 @@ struct DShowCap{
 	IGraphBuilder *pGraph;
 	CMySampleGrabberCB callBack;
 	DShowCap();
+	IBaseFilter* FindSrc(char* cameraName);
+	void Prop();
 	bool Init(char* cameraName);
 	void Release();
 };
