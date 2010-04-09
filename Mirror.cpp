@@ -24,8 +24,8 @@ void Config::Init(){
 	w *= mul;
 	
 	hSupportDepth = 0.0192;		//	hSupportÇÃí∑Ç≥ÇÕ2cm
-	hSupportGroove = 0.003;		//	hSupportë§ÇÃça 3mm
-	t = 0.002 - 0.001*0.06;
+	hSupportGroove = 0.005;		//	hSupportë§ÇÃça 3mm
+	t = 0.002 - 0.0001*0.95;	//	2mm-0.1mm*0.95 0.1mmà¯Ç¢ÇøÇ·Ç§Ç∆Ç“Ç¡ÇΩÇËÇ»ÇÃÇ≈ÅAè≠Çµó]óTÇéùÇΩÇπÇΩÅB
 }
 
 

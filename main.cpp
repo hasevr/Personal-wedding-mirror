@@ -1,7 +1,7 @@
 #include "Env.h"
 #include "Mirror.h"
 #include "Contents.h"
-#include "DShowCap.h"
+#include "DShowRecv.h"
 
 
 #include <string>
@@ -126,7 +126,7 @@ void keyboard(unsigned char key, int x, int y){
 
 		case '0':
 			std::cout << "0 Show the property sheet of the camera" << std::endl;
-			dshowCap.Prop();
+			dshowRecv.Prop();
 			break;
 		case 't':
 			env.cameraMode = Env::CM_TILE;
@@ -168,7 +168,7 @@ void keyboard(unsigned char key, int x, int y){
 		case 0x1b:
 		case 'q':
 			contents.Release();
-			dshowCap.Release();
+			dshowRecv.Release();
 			exit(0);
 			break;
 	}
@@ -177,6 +177,8 @@ void keyboard(unsigned char key, int x, int y){
 
 
 void display(){
+	dshowRecv.Set();
+
 	contents.Draw(false);
 	env.Draw();
 	glutSwapBuffers();
@@ -215,8 +217,8 @@ void setLight() {
 
 int main(int argc, char* argv[]){
 	//	"IP Camera [JPEG/MJPEG]", "Logicool Qcam Pro 9000"
-	dshowCap.Init("IP Camera [JPEG/MJPEG]");
-//	dshowCap.Init("Logicool Qcam Pro 9000");
+//	dshowRecv.Init("IP Camera [JPEG/MJPEG]");
+	dshowRecv.Init("Logicool Qcam Pro 9000");
 
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);

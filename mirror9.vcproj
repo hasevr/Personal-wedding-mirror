@@ -195,11 +195,19 @@
 			>
 		</File>
 		<File
-			RelativePath=".\DShowCap.cpp"
+			RelativePath=".\DShowFilter.cpp"
 			>
 		</File>
 		<File
-			RelativePath=".\DShowCap.h"
+			RelativePath=".\DShowFilter.h"
+			>
+		</File>
+		<File
+			RelativePath=".\DShowRecv.cpp"
+			>
+		</File>
+		<File
+			RelativePath=".\DShowRecv.h"
 			>
 		</File>
 		<File

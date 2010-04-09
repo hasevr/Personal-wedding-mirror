@@ -13,6 +13,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Graphics", "..\..\..\Spring
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Foundation", "..\..\..\Springhead2\src\Foundation\Foundation9.vcproj", "{5DD6484B-A722-48B0-91B8-63271D2B41FF}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sender", "sender9.vcproj", "{BCF71D3B-67E7-44C0-9BED-51D3A1121F6A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -35,6 +37,10 @@ Global
 		{5DD6484B-A722-48B0-91B8-63271D2B41FF}.Debug|Win32.Build.0 = Debug|Win32
 		{5DD6484B-A722-48B0-91B8-63271D2B41FF}.Release|Win32.ActiveCfg = Release|Win32
 		{5DD6484B-A722-48B0-91B8-63271D2B41FF}.Release|Win32.Build.0 = Release|Win32
+		{BCF71D3B-67E7-44C0-9BED-51D3A1121F6A}.Debug|Win32.ActiveCfg = Debug|Win32
+		{BCF71D3B-67E7-44C0-9BED-51D3A1121F6A}.Debug|Win32.Build.0 = Debug|Win32
+		{BCF71D3B-67E7-44C0-9BED-51D3A1121F6A}.Release|Win32.ActiveCfg = Release|Win32
+		{BCF71D3B-67E7-44C0-9BED-51D3A1121F6A}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

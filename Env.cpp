@@ -97,6 +97,8 @@ void Env::InitSupport(){
 					support.vPlane[x].vertices.push_back(vtx);
 					vtx += (support.yMin - vtx.y) / support.vPlane[x].dir.y * support.vPlane[x].dir;
 					support.vPlane[x].vertices.push_back(vtx);
+					DSTR << "Support " << x << 
+						" h=" << (support.vPlane[x].vertices.end()[-1] - support.vPlane[x].vertices.end()[-2]).norm() << std::endl;
 				}
 			}
 		}
@@ -411,6 +413,7 @@ void Env::DrawDesign(){
 	gluPerspective(60.0, (GLfloat)windowSize.x/(GLfloat)windowSize.y, 0.01, 50.0);
 	glMatrixMode(GL_MODELVIEW);	
 	glLoadMatrixf(mouseView.inv());
+	glTranslated(0,0,-15);
 
 	//	À•WŽ²
 	glDisable(GL_LIGHTING);
