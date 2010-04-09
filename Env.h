@@ -1,6 +1,7 @@
 #include "Mirror.h"
 
 struct Loop: public std::vector<Vec3d>{
+	std::string label;
 };
 struct Sheet{
 	std::vector<Loop> loops;

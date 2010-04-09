@@ -194,14 +194,19 @@ void Env::PlaceMirror(){
 			af.Ex().unitize();
 			af.Ey() = af.Ez() ^ af.Ex();
 			af.Pos() = cell[y][x].mirror.vertex[0];
-			af = af * Affined::Trn(x*0.037 -0.27, -yPos, 0);
+			af = af * Affined::Trn(x*0.037+0.05, -yPos, 0);
 			af = af.inv();
 			sheets.back().loops.push_back(Loop());
+			std::stringstream sstr;
+			sstr << x << " " << y;
+			sheets.back().loops.back().label = sstr.str();
 			for(int i=0; i<2; ++i){
 				sheets.back().loops.back().push_back(af * cell[y][x].mirror.vertex[i]);
+				sheets.back().loops.back().back().x *= -1;
 			}
 			for(int i=3; i>=2; --i){
 				sheets.back().loops.back().push_back(af * cell[y][x].mirror.vertex[i]);
+				sheets.back().loops.back().back().x *= -1;
 			}
 		}
 	}
@@ -223,16 +228,26 @@ void Env::WritePs(){
 		oss << "sheet" << i << ".ps";
 		std::ofstream of(oss.str().c_str());
 		double un = 2834.646;	//	’PˆÊ•ÏŠ· m/pt
+		of << "0 setlinewidth" << std::endl;
 		for(unsigned j=0; j<sheets[i].loops.size(); ++j){
 			of << "newpath" << std::endl;
 			of << sheets[i].loops[j][sheets[i].loops[j].size()-1].x*un << " " 
 				<< sheets[i].loops[j][sheets[i].loops[j].size()-1].y*un << " "
 				<< "moveto" << std::endl;
+			Vec2d center;
 			for(unsigned k=0; k<sheets[i].loops[j].size(); ++k){
 				of << sheets[i].loops[j][k].x*un << " " 
 					<< sheets[i].loops[j][k].y*un << " " << "lineto" << std::endl;
+				center += Vec2d(sheets[i].loops[j][k].x, sheets[i].loops[j][k].y);
 			}
 			of << "stroke" << std::endl;
+			center /= sheets[i].loops[j].size();
+			//	
+			of << "1 0 0 setrgbcolor" << std::endl;
+			of << "/Times-Roman findfont 8 scalefont setfont" << std::endl;			
+			of << center.x*un << " " << center.y*un << " moveto" << std::endl;
+			of << "(" << sheets[i].loops[j].label << ") show" << std::endl;
+			of << "0 0 0 setrgbcolor" << std::endl;
 		}
 		of << "showpage" << std::endl;
 	}
