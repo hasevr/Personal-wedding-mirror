@@ -12,6 +12,7 @@ struct Contents{
 	Decals decals;
 	Decals backs;
 	std::vector<Path> paths;
+	unsigned startCount;
 
 	unsigned cvTex;
 	enum CVTEXSIZE {CVTEX_SIZE = 1024};
@@ -32,6 +33,7 @@ struct Contents{
 	void DrawTile();
 	void LoadPhoto();
 	void DrawShip();
+	void ResetShip();
 
 	void Step(double dt);
 };

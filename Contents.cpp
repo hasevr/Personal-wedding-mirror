@@ -5,6 +5,7 @@
 Contents contents;
 Contents::Contents():list(0){
 	cvTex = 0;
+	ResetShip();
 }
 void Contents::LoadPhoto(){
 	decals.folderName = "texs";
@@ -23,7 +24,6 @@ void Contents::DrawPhoto(){
 }
 
 void Contents::Step(double dt){
-	static unsigned startCount=1;
 	if (startCount < decals.size() && decals[startCount-1].time > 4){
 		startCount++;
 	}
@@ -36,10 +36,17 @@ void Contents::Step(double dt){
 		backs.front().texOffset.y += 0.02 * dt;
 	}
 }
+void Contents::ResetShip(){
+	startCount = 1;	
+	for(unsigned i=0; i<decals.size(); ++i){
+		decals[i].time = 0;
+	}
+}
+
 void Contents::DrawShip(){
 	glDisable(GL_LIGHTING);
-	for(Decals::iterator it = decals.begin(); it != decals.end(); ++it){
-		it->Draw();
+	for(unsigned i=0; i<startCount; ++i){
+		decals[i].Draw();
 	}
 	if (backs.size()){
 		double size = 120;
@@ -57,6 +64,12 @@ void Contents::DrawShip(){
 }
 
 void Contents::DrawRandom(){
+	srand(0);
+	glClearColor(0.2,0.4,0.7,1);
+	glClear( GL_COLOR_BUFFER_BIT);
+	static Affined af;
+	af = Affined::Rot(Rad(0.1), 'y') * af;
+	glMultMatrixd(af);
 	glBegin(GL_LINE_LOOP);
 	for(int i=0; i<400; ++i){
 		Vec3d rp(rand(), rand(), rand());
@@ -134,7 +147,8 @@ void Contents::DrawCam(){
 	glBindTexture(GL_TEXTURE_2D, cvTex);
 	if (env.cameraMode == Env::CM_TILE){
 		//	カメラ映像の拡大率（映像テクスチャの距離）
-		double d = -3.5;	
+//		double d = -3.5;
+		double d = -2;
 		glBegin(GL_TRIANGLE_STRIP);
 		glTexCoord2dv(cvTexCoord[0]);
 		glVertex3d( 1,-1*0.75, d);
@@ -164,7 +178,7 @@ void Contents::DrawCam(){
 }
 
 void Contents::Draw(bool isInit){
-	if (!isInit && (mode==CO_RANDOM || mode==CO_CEIL || mode==CO_TILE) ) 
+	if (!isInit && (/*mode==CO_RANDOM || */mode==CO_CEIL || mode==CO_TILE) ) 
 		return;
 
 	glNewList(list, GL_COMPILE);
@@ -219,7 +233,7 @@ void Contents::Init(){
 		paths.back().push_back(Key(0, 12/speed, pose));
 		pose.Pos() = frontDir * 240 + Vec3d(i?-4:4, 0, 0) ;
 		paths.back().push_back(Key(0, 3/speed, pose));
-		double yOff = 6*2;
+		double yOff = 15;
 		double xOff = (i==0 ? 10 : -10);
 		Affined af;
 		double lookDiff = -std::abs(xOff);

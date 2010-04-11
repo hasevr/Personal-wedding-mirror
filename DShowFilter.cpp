@@ -228,8 +228,8 @@ IPin *GetPin(IBaseFilter *pFilter, PIN_DIRECTION PinDir){
 DShowCap::DShowCap(){
 	pSrc = NULL;
 	pMediaControl = NULL;
-//	pBuilder = NULL;
 	pGraph = NULL;
+	rotId = 0;
 }
 IBaseFilter* DShowCap::FindSrc(char* cameraName){
 	// 2. システムデバイス列挙子を作成
@@ -347,6 +347,7 @@ bool DShowCap::Init(char* cameraName){
 }
 void DShowCap::Release(){
 	// 6. 終了
+	if (rotId) RemoveFromRot(rotId);
 	if(pSrc) pSrc->Release();
 	if(pMediaControl) pMediaControl->Release();
 	if(pGraph) pGraph->Release();
@@ -360,4 +361,57 @@ void DShowCap::Set(){
 	static CMyMediaSample ms;
 	CMySrc* src = (CMySrc*)pSrc;	
 	src->pin.toMem->Receive(&ms);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+///	GraphEditで見るために、フィルタグラフをランタイムオブジェクトに登録する。
+///	pdwRegister は 登録時のID
+HRESULT AddToRot(IUnknown *pUnkGraph, DWORD *pdwRegister) 
+{
+    IMoniker * pMoniker = NULL;
+    IRunningObjectTable *pROT = NULL;
+
+    if (FAILED(GetRunningObjectTable(0, &pROT))) 
+    {
+        return E_FAIL;
+    }
+    
+    const size_t STRING_LENGTH = 256;
+
+    WCHAR wsz[STRING_LENGTH];
+    StringCchPrintfW(wsz, STRING_LENGTH, L"FilterGraph %08x pid %08x", (DWORD_PTR)pUnkGraph, GetCurrentProcessId());
+    
+    HRESULT hr = CreateItemMoniker(L"!", wsz, &pMoniker);
+    if (SUCCEEDED(hr)) 
+    {
+        hr = pROT->Register(ROTFLAGS_REGISTRATIONKEEPSALIVE, pUnkGraph,
+            pMoniker, pdwRegister);
+        pMoniker->Release();
+    }
+    pROT->Release();
+    
+    return hr;
+}
+void RemoveFromRot(DWORD pdwRegister)
+{
+    IRunningObjectTable *pROT;
+    if (SUCCEEDED(GetRunningObjectTable(0, &pROT))) {
+        pROT->Revoke(pdwRegister);
+        pROT->Release();
+    }
 }

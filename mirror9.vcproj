@@ -230,6 +230,14 @@
 			RelativePath=".\Mirror.h"
 			>
 		</File>
+		<File
+			RelativePath=".\Packet.h"
+			>
+		</File>
+		<File
+			RelativePath=".\WBSocket.cpp"
+			>
+		</File>
 	</Files>
 	<Globals>
 	</Globals>

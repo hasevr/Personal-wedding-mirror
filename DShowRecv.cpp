@@ -1,12 +1,78 @@
 #include "Env.h"
 #include "Contents.h"
 #include "DShowRecv.h"
+#include "Packet.h"
 #include <dshow.h>
 #include <qedit.h>
 #include <windows.h>
 #pragma comment(lib, "strmiids.lib")
 
 DShowRecv dshowRecv;
+
+CMySrcRecv::CMySrcRecv(){
+	pMediaBuf=NULL;
+}
+CMySrcRecv::~CMySrcRecv(){
+	delete pMediaBuf;
+}
+DWORD WINAPI thread(void* p){
+	CMySrcRecv*This = (CMySrcRecv*)p;
+	while(1){
+		This->Recv();
+	}
+}
+void CMySrcRecv::Init(){
+	sockRecv.Init(AF_INET, SOCK_DGRAM, 0);
+	WBSockAddr adr;
+	adr.AdrIn().sin_family = AF_INET;
+	adr.AdrIn().sin_port = htons(PORT_SEND);
+	adr.AdrIn().sin_addr.s_addr = htonl(INADDR_ANY);
+	if(bind(sockRecv, (LPSOCKADDR)&adr, sizeof(adr))==SOCKET_ERROR){
+		int error = WSAGetLastError();
+		closesocket(sockRecv);
+		sockRecv = INVALID_SOCKET;
+		exit(0);
+	}
+	delete pMediaBuf;
+	pMediaBuf = new unsigned char[1024 * 768 * 4];
+	CreateThread(NULL, 0, thread, this, 0, NULL);
+}
+bool CMySrcRecv::Recv(){
+	unsigned char buf[2048];
+	WBSockAddr adr;
+	sockRecv.RecvFrom(buf, sizeof(buf), adr);
+	if (buf[0] == pdata.packetId[0]){		
+		if (pMediaBuf){
+			PMediaData* pData = (PMediaData*)buf;
+			memcpy(pMediaBuf+ pData->count*1024, pData->data, 1024);
+		}
+	}else if(buf[0] == plen.packetId[0]){
+		//	1回前のバッファを送信
+		static CMySampleRecv ms(this);
+		if (pin.isConnected) pin.toMem->Receive(&ms);
+		
+		//	次のバッファの長さを取得
+		memcpy(&plen, buf, sizeof(plen));
+		int bufLen = (plen.len+1023)/1024*1024;
+		return false;
+	}else if(buf[0] == ptype.packetId[0]){
+		memcpy(&ptype, buf, sizeof(ptype));
+	}
+	return true;
+}
+
+STDMETHODIMP CMySampleRecv::GetMediaType(AM_MEDIA_TYPE ** ppMedia){
+	*ppMedia = &pSrc->ptype.mt;
+	return S_OK;
+}
+STDMETHODIMP CMySampleRecv::GetPointer(BYTE** pBuf){
+	*pBuf = pSrc->pMediaBuf;
+	return S_OK;
+}
+STDMETHODIMP_(long) CMySampleRecv::GetSize(){
+	return pSrc->plen.len;
+}
+
 
 
 //----------------------------------------------------------------------------------------
@@ -40,11 +106,11 @@ bool DShowRecv::Init(char* cameraName){
 	CoCreateInstance(CLSID_FilterGraph, NULL, CLSCTX_INPROC, IID_IGraphBuilder, (void **)&pGraph);
 
 	// 2. ソースフィルタ（カメラ）の取得
-#if 0
+#if 1
 	pSrc = FindSrc(cameraName);
 #else
-	static CMySrc mySrc;
 	pSrc = &mySrc;
+	mySrc.Init();
 #endif
 	if (!pSrc) return false;
 	pGraph->AddFilter(pSrc, L"Video Capture");
@@ -89,7 +155,5 @@ void DShowRecv::Release(){
 }
 
 void DShowRecv::Set(){
-	static CMyMediaSample ms;
-	CMySrc* src = (CMySrc*)pSrc;	
-	src->pin.toMem->Receive(&ms);
+//	while(mySrc.Recv());
 }

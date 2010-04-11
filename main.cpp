@@ -45,7 +45,7 @@ void __cdecl motion(int x, int y){
 	}
 	// ‰Eƒ{ƒ^ƒ“
 	if(bRightButton){
-		CameraZoom *= exp(yrel/10.0);
+		CameraZoom *= exp(yrel/300.0);
 		CameraZoom = max(0.1, min(CameraZoom, 100.0));
 	}
 	mouseView.Pos() = CameraZoom * Vec3f(
@@ -116,6 +116,7 @@ void keyboard(unsigned char key, int x, int y){
 		case '5':
 			env.drawMode = Env::DM_DESIGN;
 			loadWindow();
+			env.bZoomMirror = !env.bZoomMirror;
 			std::cout << "5 Draw design" << std::endl;
 			break;
 		case '6':
@@ -160,9 +161,14 @@ void keyboard(unsigned char key, int x, int y){
 			contents.LoadPhoto();
 			std::cout << "p Contents=photo" << std::endl;
 			break;
+		case 'l':
+			std::cout << "l LoadPhoto...";
+			contents.LoadPhoto();
+			std::cout << " done." << std::endl;
+			break;
 		case 's':
 			contents.mode = Contents::CO_SHIP;
-			contents.LoadPhoto();
+			contents.ResetShip();
 			std::cout << "s Contents=ship" << std::endl;
 			break;
 		case 0x1b:

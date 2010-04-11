@@ -4,7 +4,7 @@
 #define MIRROR_H
 
 #define DIVX	8
-#define DIVY	6
+#define DIVY	4
 using namespace Spr;
 
 struct Front{

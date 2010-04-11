@@ -253,6 +253,7 @@ void Env::WritePs(){
 	}
 }
 void Env::Init(){
+	bZoomMirror = false;
 	dt = 1.0 / 60;
 	drawMode = DM_DESIGN;
 	front.Init();
@@ -264,7 +265,7 @@ void Env::Init(){
 	InitSupport();
 	PlaceMirror();
 	PlaceSupport();
-	WritePs();
+//	WritePs();
 	InitGL();
 }
 
@@ -395,13 +396,16 @@ void Env::DrawMirror(int fb){
 	glLineWidth(10);
 	glColor3d(0,0,0);
 	glBegin(GL_LINES);
-	for(int y=1; y<DIVY; ++y){
-		glVertex3dv(cell[y][0].inPos[0]);
-		glVertex3dv(cell[y][DIVX-1].inPos[1]);
-	}
-	for(int x=1; x<DIVX	; ++x){
-		glVertex3dv(cell[0][x].inPos[0]);
-		glVertex3dv(cell[DIVY-1][x].inPos[2]);
+	double dd = 0.001;
+	for(double d=-dd*2; d<=dd*2; d+=dd){
+		for(int y=1; y<DIVY; ++y){
+			glVertex3dv(cell[y][0].inPos[0] + Vec3d(0,d,0));
+			glVertex3dv(cell[y][DIVX-1].inPos[1] + Vec3d(0,d,0));
+		}
+		for(int x=1; x<DIVX	; ++x){
+			glVertex3dv(cell[0][x].inPos[0] + Vec3d(d,0,0));
+			glVertex3dv(cell[DIVY-1][x].inPos[2] + Vec3d(d,0,0));
+		}
 	}
 	glEnd();
 	//	‹¾‚ÉŽÊ‚·‚×‚«‰f‘œ‚ð•À‚×‚é
@@ -428,7 +432,11 @@ void Env::DrawDesign(){
 	gluPerspective(60.0, (GLfloat)windowSize.x/(GLfloat)windowSize.y, 0.01, 50.0);
 	glMatrixMode(GL_MODELVIEW);	
 	glLoadMatrixf(mouseView.inv());
-	glTranslated(0,0,-15);
+
+	//	‹¾‚ðŠg‘å•\Ž¦‚·‚éê‡‚Ì•ÀiˆÚ“®
+	if (bZoomMirror){
+		glTranslated(0,0,-12);
+	}
 
 	//	À•WŽ²
 	glDisable(GL_LIGHTING);

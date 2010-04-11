@@ -135,6 +135,7 @@ struct DShowCap{
 	IBaseFilter *pSrc;
 	IMediaControl *pMediaControl;
 	IGraphBuilder *pGraph;
+	DWORD rotId;
 	CMySampleGrabberCB callBack;
 	DShowCap();
 	IBaseFilter* FindSrc(char* cameraName);
@@ -143,4 +144,11 @@ struct DShowCap{
 	void Release();
 	void Set();
 };
+///	フィルタから指定の方向のピンを取り出す
 IPin *GetPin(IBaseFilter *pFilter, PIN_DIRECTION PinDir);
+
+///	GraphEditで見るために、フィルタグラフをランタイムオブジェクトに登録する。
+///	pdwRegister は 登録時のID
+HRESULT AddToRot(IUnknown *pUnkGraph, DWORD *pdwRegister);
+///	ランタイムオブジェクトからの登録解除pdwRegister は 登録時のID
+void RemoveFromRot(DWORD pdwRegister);

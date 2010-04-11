@@ -7,6 +7,7 @@ struct Sheet{
 	std::vector<Loop> loops;
 };
 struct Env{
+	bool bZoomMirror;
 	double dt;
 	Config config;
 	Front front;

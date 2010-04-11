@@ -8,24 +8,29 @@ void Front::Init(){
 	hOff = 1;
 }
 void Config::Init(){
-	outXRad[0] = Rad(75);
-	outXRad[1] = Rad(-75);
-	outY[0] = 1;		//	31m だから、片側 13m と考える
-	outY[1] = -12.0;		//	
-	ceil = 4.5-0.9;	//	机の高さが90cm?
-	wall = 4.6;		//	幅13mだが、天井付近は細くなっているので、9mと見た
+	//	奥行き方向、手前、奥、各１つ減らす。
+	//	左右方向、左右それぞれ、１．５個減らす
+
+	outXRad[0] = Rad(65);
+	outXRad[1] = Rad(-65);
+	outY[0] = -1;		//	31m だから、片側 13m と考える
+	outY[1] = -10.0;		//	
+	ceil = 4.5-0.7;	//	机の高さが70cm
+	wall = 5.7;		//	幅13m、天井付近は細くなっているけど、13m - 0.8*2 = 11.4m くらいある
 	d = 1.2;
 	hOff = 0.05;
 	h = 0.53 - hOff;
 	w = h*4/3;
-	projectionPitch = Rad(30);
+//	projectionPitch = Rad(30);
+	projectionPitch = Rad(3);
 	double mul = (1.0/d) * 0.4;
 	d *= mul;	hOff *= mul;	h *= mul;
 	w *= mul;
 	
 	hSupportDepth = 0.0192;		//	hSupportの長さは2cm
 	hSupportGroove = 0.005;		//	hSupport側の溝 3mm
-	t = 0.002 - 0.0001*0.95;	//	2mm-0.1mm*0.95 0.1mm引いちゃうとぴったりなので、少し余裕を持たせた。
+//	t = 0.002 - 0.0001*0.95;	//	2mm-0.1mm*0.95 0.1mm引いちゃうとぴったりなので、少し余裕を持たせた。
+	t = 0.002 - 0.0001*0.5;		//	↑でも入らなかったので思い切って余裕を多くしてみる
 }
 
 
@@ -70,7 +75,8 @@ void Cell::Init(int xIn, int yIn){
 	//	outDirの計算
 	//  dist(天井高)=ceil  H=16m のスクリーン。 outY[0]m ～ outY[1]m
 	//	横は、-80度～80度で角度等間隔
-	double radX = config.outXRad[0] + (config.outXRad[1]-config.outXRad[0]) * (x + (y%2)/2.0) / (DIVX-0.5);
+//	double radX = config.outXRad[0] + (config.outXRad[1]-config.outXRad[0]) * (x + (y%2)/2.0) / (DIVX-0.5);
+	double radX = config.outXRad[0] + (config.outXRad[1]-config.outXRad[0]) * x / (DIVX-1);
 	outDirCenter.x = tan(radX) * config.ceil;
 	if (-config.wall<outDirCenter.x && outDirCenter.x < config.wall){
 		outDirCenter.y = config.ceil;

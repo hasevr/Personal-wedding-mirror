@@ -1,29 +1,19 @@
+#include "WBSocket.h"
 #include "DShowFilter.h"
+#include "Packet.h"
 
-class CMySGCBSend : public ISampleGrabberCB{
+class CMySGCBSend : public CMySampleGrabberCB{
 public:
-	void SetImage(unsigned char * pBuffer,int nBufferSize);
-	CMySGCBSend();
-	virtual ~CMySGCBSend();
-
-	STDMETHODIMP_(ULONG) AddRef(){ return 2; }
-	STDMETHODIMP_(ULONG) Release(){ return 1; }
-	STDMETHODIMP QueryInterface(REFIID riid, void ** ppv);
+	PMediaType mediaType;
+	WBSocket sockSend;
+	WBSockAddr adrBcast;
 	STDMETHODIMP SampleCB( double SampleTime, IMediaSample * pSample );
-	STDMETHODIMP BufferCB( double dblSampleTime, BYTE * pBuffer, long lBufferSize );
+	void InitSock();
 };
 
-struct DShowSender{
-	IBaseFilter *pSrc;
-	IMediaControl *pMediaControl;
-	IGraphBuilder *pGraph;
+struct DShowSender: public DShowCap{
 	CMySGCBSend callBack;
-	DShowSender();
-	IBaseFilter* FindSrc(char* cameraName);
-	void Prop();
 	bool Init(char* cameraName);
-	void Release();
-	void Set();
 };
 
 extern DShowSender dshowSender;
