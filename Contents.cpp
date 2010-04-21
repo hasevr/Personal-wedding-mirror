@@ -45,7 +45,7 @@ void Contents::ResetShip(){
 
 void Contents::DrawShip(){
 	glDisable(GL_LIGHTING);
-	for(unsigned i=0; i<startCount; ++i){
+	for(unsigned i=0; i<startCount && i<decals.size(); ++i){
 		decals[i].Draw();
 	}
 	if (backs.size()){
@@ -230,9 +230,9 @@ void Contents::Init(){
 		pose.Pos() = frontDir * 960 + Vec3d(i?40:-40, 0, 0) ;
 		paths.back().push_back(Key(0, 12/speed, pose, 0));
 		pose.Pos() = frontDir * 600 + Vec3d(i?20:-20, 0, 0) ;
-		paths.back().push_back(Key(0, 12/speed, pose));
+//		paths.back().push_back(Key(0, 12/speed, pose));
 		pose.Pos() = frontDir * 240 + Vec3d(i?-4:4, 0, 0) ;
-		paths.back().push_back(Key(0, 3/speed, pose));
+//		paths.back().push_back(Key(0, 3/speed, pose));
 		double yOff = 15;
 		double xOff = (i==0 ? 10 : -10);
 		Affined af;
