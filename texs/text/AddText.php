@@ -86,6 +86,7 @@ for($i=0;; $i++){
 				echo "num:$num mess: $mess";
 				$dir = scandir($dirname);
 				foreach($dir as $fn){
+					echo "fn: $fn \n";
 			 		if (substr($fn,0,2) == $num){
 				 		AddText("$fn", $mess, $pos);
 				 		break;
