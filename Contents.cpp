@@ -227,16 +227,16 @@ void Contents::Init(){
 	for(int i=0; i<2; ++i){
 		Posed pose;
 		paths.push_back(Path());
-		pose.Pos() = frontDir * 960 + Vec3d(i?40:-40, 0, 0) ;
-		paths.back().push_back(Key(0, 12/speed, pose, 0));
-		pose.Pos() = frontDir * 600 + Vec3d(i?20:-20, 0, 0) ;
-//		paths.back().push_back(Key(0, 12/speed, pose));
-		pose.Pos() = frontDir * 240 + Vec3d(i?-4:4, 0, 0) ;
-//		paths.back().push_back(Key(0, 3/speed, pose));
-		double yOff = 15;
-		double xOff = (i==0 ? 10 : -10);
+		pose.Pos() = frontDir * 480 + Vec3d(i?40:-40, 0, 0) ;
+//		paths.back().push_back(Key(0, 12/speed, pose, 0));
+		pose.Pos() = frontDir * 300 + Vec3d(i?20:-20, 0, 0) ;
+		paths.back().push_back(Key(0, 12/speed, pose));
+		pose.Pos() = frontDir * 120 + Vec3d(i?-4:4, 0, 0) ;
+		paths.back().push_back(Key(0, 3/speed, pose));
+		double yOff = 75;
+		double xOff = (i==0 ? 1 : -1)*15;
 		Affined af;
-		double lookDiff = -std::abs(xOff);
+		double lookDiff = -std::abs(xOff) * 200;
 
 		af.Pos() = Vec3d(xOff, yOff, 60);
 		af.LookAtGL(Vec3d(0, yOff+lookDiff, 60), Vec3d(0,1,0));

@@ -3,8 +3,8 @@
 #ifndef MIRROR_H
 #define MIRROR_H
 
-#define DIVX	8
-#define DIVY	4
+#define DIVX	3
+#define DIVY	6
 using namespace Spr;
 
 struct Front{

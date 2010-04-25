@@ -2,21 +2,22 @@
 #include "Env.h"
 
 void Front::Init(){
-	w = 2;
-	h = 1.5;
+	w = 4;
+	h = 3;
 	d = 15.5;
-	hOff = 1;
+	hOff = 0.5;
 }
 void Config::Init(){
 	//	奥行き方向、手前、奥、各１つ減らす。
 	//	左右方向、左右それぞれ、１．５個減らす
 
-	outXRad[0] = Rad(65);
-	outXRad[1] = Rad(-65);
-	outY[0] = -1;		//	31m だから、片側 13m と考える
-	outY[1] = -10.0;		//	
+	outXRad[0] = Rad(66);
+	outXRad[1] = Rad(-66);
+	outY[0] = -1;		//	31m/2 = 15.5m だけど、 余裕を見て9mにしておく
+	outY[1] = -10.0;	//	
 	ceil = 4.5-0.7;	//	机の高さが70cm
-	wall = 5.7;		//	幅13m、天井付近は細くなっているけど、13m - 0.8*2 = 11.4m くらいある
+//	wall = 5.7;		//	幅13m、天井付近は細くなっているけど、13m - 0.8*2 = 11.4m くらいある
+	wall = (15/2-0.7);
 	d = 1.2;
 	hOff = 0.05;
 	h = 0.53 - hOff;
@@ -40,7 +41,9 @@ void Cell::Init(int xIn, int yIn){
 	double ySum = 0;
 	double yInterval[DIVY];
 	double yPos[DIVY+1];
-	double alpha = 0.8;
+	double xInterval[DIVX];
+	double xPos[DIVX+1];
+	double alpha = 1;//0.8;
 	for(int y=0; y<DIVY; ++y){
 		if (y==0) yInterval[y] = alpha;
 		else yInterval[y] = pow(alpha, y);
@@ -49,17 +52,23 @@ void Cell::Init(int xIn, int yIn){
 	for(int y=0; y<DIVY; ++y) yInterval[y] /= ySum;
 	yPos[0] = 0;
 	for(int y=0; y<DIVY; ++y) yPos[y+1] = yPos[y] + yInterval[y];
+
+	xInterval[0] = xInterval[2] = 0.15;
+	xInterval[1] = 1 - xInterval[0] - xInterval[2];
+	xPos[0] = 0;
+	for(int x=0; x<DIVX; ++x) xPos[x+1] = xPos[x] + xInterval[x];
+
 	//	プロジェクタが原点。上がy、プロジェクタから出る光の向きがz、プロジェクタに向かって右がx
 	//	inDirの計算：プロジェクタの仕様と分割数で決まる
 	x = xIn;
 	y = yIn;
 	for(int i=0; i<4; ++i){
-		inPos[i].x = -config.w/2 + (config.w/DIVX) * (x+i%2);
+		inPos[i].x = -config.w/2 + config.w * xPos[x+i%2];
 		inPos[i].y = config.hOff + config.h * yPos[y+i/2];
 		inPos[i].z = config.d;
 	}
-	inDirCenter.x = (inPos[0].x+inPos[1].x) / 2;	//-config.w/2 + (config.w/DIVX) * (x+0.5);
-	inDirCenter.y = (inPos[0].y+inPos[2].y) / 2; //config.hOff + config.h * (yPos[y]+yPos[y+1])/2;
+	inDirCenter.x = (inPos[0].x+inPos[1].x) / 2;
+	inDirCenter.y = (inPos[0].y+inPos[2].y) / 2;
 	inDirCenter.z = config.d;
 	for(int i=0; i<4; ++i) inDir[i] = inPos[i].unit();
 	inDirCenter.unitize();
@@ -76,16 +85,32 @@ void Cell::Init(int xIn, int yIn){
 	//  dist(天井高)=ceil  H=16m のスクリーン。 outY[0]m ～ outY[1]m
 	//	横は、-80度～80度で角度等間隔
 //	double radX = config.outXRad[0] + (config.outXRad[1]-config.outXRad[0]) * (x + (y%2)/2.0) / (DIVX-0.5);
-	double radX = config.outXRad[0] + (config.outXRad[1]-config.outXRad[0]) * x / (DIVX-1);
+//	double radX = config.outXRad[0] + (config.outXRad[1]-config.outXRad[0]) * x / (DIVX-1);
+
+/*	double radX;
+	radX = config.outXRad[0] + (config.outXRad[1]-config.outXRad[0]) * x / (DIVX-1);
+	if (0 < x && x < DIVX-1){
+		radX += (config.outXRad[1]-config.outXRad[0]) / DIVX /3 * (y%2?1:-1);
+	}
+*/
+
+	double radX=0;
+	if (x==0) radX = config.outXRad[0] + (y%2?1:-1)*Rad(2.5);
+	if (x==2) radX = config.outXRad[1] + (y%2?1:-1)*Rad(2.5);
+	if (x==1){
+		if (y%2) radX = -Rad(35);
+		else radX = Rad(35);
+	}
 	outDirCenter.x = tan(radX) * config.ceil;
 	if (-config.wall<outDirCenter.x && outDirCenter.x < config.wall){
 		outDirCenter.y = config.ceil;
+		outDirCenter.z = config.outY[0]+(config.outY[1]-config.outY[0])*(y/2)/((DIVY/2)-1);
 	}else{
 		outDirCenter.x = outDirCenter.x>0 ? config.wall : -config.wall;
 		outDirCenter.y = tan(Rad(90)-radX) * config.wall;
 		if (outDirCenter.y < 0) outDirCenter.y *= -1;
+		outDirCenter.z = config.outY[0]+(config.outY[1]-config.outY[0])*(y)/(DIVY-1);
 	}
-	outDirCenter.z = config.outY[0]+(config.outY[1]-config.outY[0])*y/(DIVY-1);
 
 
 	outDirCenter.unitize();
@@ -112,6 +137,7 @@ void Cell::CalcPosition(double depth, int id){	//	頂点id がdepthになるようにする
 	oc *= ceilDist / oc.y;
 	double wallLeft = -config.wall - mirror.center.x;
 	double wallRight = config.wall - mirror.center.x;
+
 	if (oc.x > wallRight){
 		oc *= wallRight/oc.x;
 		outPlace = 1;
@@ -172,6 +198,7 @@ void Cell::InitFrontCamera(int fb){
 		projection[fb] = Affined::ProjectionGL(screenCenter, screenSize, 1, 10000);
 	}
 }
+//	Worldの時の、プロジェクションは考えた方が良い。原点から見た絵だと歪みすぎる。
 void Cell::InitCamera(int fb){
 	//	projPose系で計算する。
 	Vec3d localScreen[4];
@@ -180,7 +207,12 @@ void Cell::InitCamera(int fb){
 
 	if (env.cameraMode == Env::CM_WINDOW){
 		//	視点をWorldの原点に設定
-		view[fb].Pos() = env.projPose.inv() * Vec3d(0,0,0);
+//		view[fb].Pos() = env.projPose.inv() * Vec3d(0,0,0);
+
+		//	視点を地下10m、壁の場合10m下がる
+		if(outPlace) view[fb].Pos() = env.projPose.inv() * Vec3d(0, 0, -outPlace*20);
+		view[fb].Pos() = env.projPose.inv() * Vec3d(0,-20, 0);
+
 		if (outPlace){	//	壁だったら
 			view[fb].LookAtGL(Vec3d(outPlace*config.wall, view[fb].Pos().y, view[fb].Pos().z), Vec3d(0, 1, 0));
 		}else{

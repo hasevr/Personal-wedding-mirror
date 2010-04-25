@@ -15,12 +15,9 @@ void Env::InitMirror(){
 	}
 	double depth = config.d;
 	for(int y=0; y<DIVY; ++y){
-		cell[y][DIVX/2-1].CalcPosition(depth, 1);
-		cell[y][DIVX/2].CalcPosition(depth, 0);
-		for(int i=1; i<DIVX/2; ++i){
-			cell[y][DIVX/2-i-1].CalcPosition(cell[y][DIVX/2-i].mirror.vertex[0].z, 1);
-			cell[y][DIVX/2+i].CalcPosition(cell[y][DIVX/2+i-1].mirror.vertex[1].z, 0);
-		}
+		cell[y][1].CalcPosition(depth, 1);
+		cell[y][0].CalcPosition(cell[y][1].mirror.vertex[0].z, 1);
+		cell[y][2].CalcPosition(cell[y][1].mirror.vertex[1].z, 0);
 		depth = cell[y][DIVX/2].mirror.vertex[2].z;
 	}
 }
