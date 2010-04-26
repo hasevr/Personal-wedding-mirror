@@ -116,7 +116,9 @@ void Env::InitSupport(){
 				support.hPlane[y].vertices.push_back(vtx);
 				double d1 = config.hSupportDepth;
 				double d2 = config.hSupportDepth - config.hSupportGroove;
+				
 				if (x==0 && i==0) backs.push_back(vtx + cell[y][x].inDirCenter*d1);
+//				if (i==0) backs.push_back(vtx + cell[y][x].inDirCenter*d1);
 				if (i==1){
 					Vec3d ctr = cell[y][x].mirror.center;
 					Vec3d line = (support.hPlane[y].normal ^ cell[y][x].inDirCenter).unit();
@@ -125,7 +127,9 @@ void Env::InitSupport(){
 					backs.push_back(ctr + cell[y][x].inDirCenter*d2 + line*config.t/2);
 					backs.push_back(ctr + cell[y][x].inDirCenter*d1 + line*config.t/2);
 				}
-				if (x==DIVX-1 && i==1) backs.push_back(vtx + cell[y][x].inDirCenter*d1);
+//				if (x==DIVX-1 && i==1) backs.push_back(vtx + cell[y][x].inDirCenter*d1);
+				if (i==1) backs.push_back(vtx + cell[y][x].inDirCenter*d1);
+
 			}
 		}
 		support.hPlane[y].vertices.insert(support.hPlane[y].vertices.end(), backs.rbegin(), backs.rend());
