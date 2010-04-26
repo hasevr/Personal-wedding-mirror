@@ -14,11 +14,12 @@ void Env::InitMirror(){
 		cell[y][x].Init(x,y);
 	}
 	double depth = config.d;
+	//	鏡の頂点は、-x -y, +x, -y, -x +y, +x +y の順
 	for(int y=0; y<DIVY; ++y){
-		cell[y][1].CalcPosition(depth, 1);
-		cell[y][0].CalcPosition(cell[y][1].mirror.vertex[0].z, 1);
+		cell[y][0].CalcPosition(depth, 1);
+		cell[y][1].CalcPosition(cell[y][0].mirror.vertex[1].z, 0);
 		cell[y][2].CalcPosition(cell[y][1].mirror.vertex[1].z, 0);
-		depth = cell[y][DIVX/2].mirror.vertex[2].z;
+		depth = cell[y][1].mirror.vertex[2].z;
 	}
 }
 void Env::InitCamera(){
@@ -432,7 +433,7 @@ void Env::DrawDesign(){
 
 	//	鏡を拡大表示する場合の並進移動
 	if (bZoomMirror){
-		glTranslated(0,0,-12);
+		glTranslated(0,0,-env.projPose.pz - 0.6);
 	}
 
 	//	座標軸

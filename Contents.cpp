@@ -238,9 +238,9 @@ void Contents::Init(){
 		Affined af;
 		double lookDiff = -std::abs(xOff) * 200;
 
-		af.Pos() = Vec3d(xOff, yOff, 60);
-		af.LookAtGL(Vec3d(0, yOff+lookDiff, 60), Vec3d(0,1,0));
-		paths.back().push_back(Key(0, 9/speed, Posed(af)));
+		af.Pos() = Vec3d(xOff, yOff, 45);
+		af.LookAtGL(Vec3d(0, yOff+lookDiff, 45), Vec3d(0,1,0));
+		paths.back().push_back(Key(0, 6/speed, Posed(af)));
 
 		af.Pos() = Vec3d(xOff, yOff, 15);
 		af.LookAtGL(Vec3d(0, yOff+lookDiff, 15), Vec3d(0,1,0));
@@ -250,19 +250,19 @@ void Contents::Init(){
 
 		af.Pos() = Vec3d(xOff, yOff, -15);
 		af.LookAtGL(Vec3d(0, yOff+lookDiff, -15), Vec3d(0,1,0));
-		paths.back().push_back(Key(0, 9/speed, Posed(af)));
+		paths.back().push_back(Key(0, 6/speed, Posed(af)));
 
-		af.Pos() = Vec3d(xOff, yOff, -60);
-		af.LookAtGL(Vec3d(0, yOff+lookDiff, -60), Vec3d(0,1,0));
+		af.Pos() = Vec3d(xOff, yOff, -45);
+		af.LookAtGL(Vec3d(0, yOff+lookDiff, -45), Vec3d(0,1,0));
 		paths.back().push_back(Key(0, 3/speed, Posed(af)));
 
 		if (i==0) pose.Ori() = Quaterniond::Rot(Rad(180), 'y');
 		else pose.Ori() = Quaterniond::Rot(Rad(-180), 'y');
-		pose.Pos() = backDir * 240;
+		pose.Pos() = backDir * 120;
 		paths.back().push_back(Key(0, 12/speed, pose));
-		pose.Pos() = backDir * 600;
+		pose.Pos() = backDir * 300;
 		paths.back().push_back(Key(0, 12/speed, pose));
-		pose.Pos() = backDir * 960;
+		pose.Pos() = backDir * 480;
 		paths.back().push_back(Key(1, 0, pose, 0));
 	}
 

@@ -95,16 +95,17 @@ void Cell::Init(int xIn, int yIn){
 */
 
 	double radX=0;
-	if (x==0) radX = config.outXRad[0] + (y%2?1:-1)*Rad(2.5);
-	if (x==2) radX = config.outXRad[1] + (y%2?1:-1)*Rad(2.5);
+	if (x==0) radX = config.outXRad[0] + (y%2?1:-1)*Rad(2.2);
+	if (x==2) radX = config.outXRad[1] + (y%2?1:-1)*Rad(2.2);
 	if (x==1){
-		if (y%2) radX = -Rad(35);
+		if (y<DIVY/2) radX = -Rad(35);
 		else radX = Rad(35);
 	}
 	outDirCenter.x = tan(radX) * config.ceil;
 	if (-config.wall<outDirCenter.x && outDirCenter.x < config.wall){
 		outDirCenter.y = config.ceil;
-		outDirCenter.z = config.outY[0]+(config.outY[1]-config.outY[0])*(y/2)/((DIVY/2)-1);
+		if (y < DIVY/2) outDirCenter.z = config.outY[0]+(config.outY[1]-config.outY[0])*y/((DIVY/2)-1);
+		else outDirCenter.z = config.outY[0]+(config.outY[1]-config.outY[0])*(DIVY-y-1)/((DIVY/2)-1);
 	}else{
 		outDirCenter.x = outDirCenter.x>0 ? config.wall : -config.wall;
 		outDirCenter.y = tan(Rad(90)-radX) * config.wall;
