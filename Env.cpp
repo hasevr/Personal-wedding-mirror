@@ -188,6 +188,7 @@ void Env::PlaceMirror(){
 			lenMax = std::max(lenMax, (cell[y][x].mirror.vertex[2] - cell[y][x].mirror.vertex[0]).norm());
 		}
 		yPos += lenMax + 0.002;
+		double xPlace[DIVX] = {0.05, 0.22, 0.26};
 		for(int x=0; x<DIVX; ++x){
 			Affined af;
 			af.Ez() = cell[y][x].mirror.normal;
@@ -196,7 +197,7 @@ void Env::PlaceMirror(){
 			af.Ex().unitize();
 			af.Ey() = af.Ez() ^ af.Ex();
 			af.Pos() = cell[y][x].mirror.vertex[0];
-			af = af * Affined::Trn(x*0.037+0.05, -yPos, 0);
+			af = af * Affined::Trn(xPlace[x] , -yPos, 0);
 			af = af.inv();
 			sheets.back().loops.push_back(Loop());
 			std::stringstream sstr;
