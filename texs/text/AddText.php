@@ -5,7 +5,7 @@ $dirname = "img";
 
 function AddText($fn, $mess, $pos){
 	$mess = trim($mess);
-	echo "AddText($fn, $mess);\n";
+	echo "AddText($fn, ", mb_convert_encoding($mess, "SJIS", "UTF-8"), ");\n";
 	global $dirname;
 	$im = imagecreatefromjpeg("$dirname/$fn");
 	if (!$im){
@@ -17,7 +17,9 @@ function AddText($fn, $mess, $pos){
 	
 	$size = 24;
 	$angle = 0;
-	$font = "/Windows/Fonts/HGRSMP.TTF";
+//	$font = "/Windows/Fonts/HGRSMP.TTF";
+	$font = "./mika_PB.TTF";
+	$font = "./cinecaption226.ttf";
 
 	$lines = explode("\n", $mess);
 	$lineH = 0;
@@ -65,28 +67,31 @@ function AddText($fn, $mess, $pos){
 	imageDestroy($im);
 }
 
+
+
 $txt = file("text.txt");
 $mess = "";
 $num = 0;
+$pos = "b";
 for($i=0;; $i++){
 	$line=@$txt[$i];
 	$find = strpos($line, "\t");
 	if (!($find === FALSE) || $i == count($txt)){
+		//	次の行に進んだので、前の行を出力
 		$n = substr($line, 0, $find);
 		$m = substr($line, $find+1);
 		$find = strpos($m, "\t");
 		$key = substr($m, 0,1);
-		$pos = "b";
+		$newpos = "b";
 		if ($key=="u" || $key=="t" || $key=="d" || $key=="b"){
-			if ($key=="u" || $key=="t") $pos = "t";
+			if ($key=="u" || $key=="t") $newpos = "t";
 			$m = substr($m, $find+1);
 		}
 		if (is_numeric($n) || $i == count($txt)){
 			if ($mess){
-				echo "num:$num mess: $mess";
+				//echo "num:$num mess: ", mb_convert_encoding($mess, "SJIS", "UTF-8");
 				$dir = scandir($dirname);
 				foreach($dir as $fn){
-					echo "fn: $fn \n";
 			 		if (substr($fn,0,2) == $num){
 				 		AddText("$fn", $mess, $pos);
 				 		break;
@@ -95,6 +100,7 @@ for($i=0;; $i++){
 			}
 			$num = $n;
 			$mess = $m;
+			$pos = $newpos;
 		}else{
 			$mess .= "\n";
 			$mess .= $line;
