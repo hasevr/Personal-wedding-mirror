@@ -2,6 +2,16 @@
 #include <qedit.h>
 #include <vector>
 
+
+class CMediaType:public AM_MEDIA_TYPE{
+public:
+	CMediaType();
+	CMediaType(const CMediaType& m);
+	CMediaType(const AM_MEDIA_TYPE& m);
+	~CMediaType();
+	CMediaType& operator=(const AM_MEDIA_TYPE& m);
+};
+
 class CMyMediaSample: public IMediaSample{
 public:
 	STDMETHODIMP QueryInterface(REFIID riid, void ** ppv);
@@ -9,9 +19,9 @@ public:
 	STDMETHODIMP_(ULONG) Release(){ return 1; }
 	STDMETHODIMP GetPointer(BYTE** pBuf){ *pBuf = (BYTE*)this; return S_OK; }
 	STDMETHODIMP_(long) GetSize(){ return sizeof(this); }
-	STDMETHODIMP GetTime(REFERENCE_TIME* pStart, REFERENCE_TIME* pEnd){ return E_NOTIMPL; }
+	STDMETHODIMP GetTime(REFERENCE_TIME* pStart, REFERENCE_TIME* pEnd){ return VFW_E_SAMPLE_TIME_NOT_SET; }
 	STDMETHODIMP SetTime(REFERENCE_TIME* pStart, REFERENCE_TIME* pEnd){ return E_NOTIMPL; }
-	STDMETHODIMP IsSyncPoint() { return S_FALSE; }
+	STDMETHODIMP IsSyncPoint() { return S_OK; }
 	STDMETHODIMP SetSyncPoint(BOOL b) { return S_OK; }
 	STDMETHODIMP_(long) GetActualDataLength(){ return GetSize(); }
 	STDMETHODIMP SetActualDataLength(long l){ return E_NOTIMPL; }
@@ -30,8 +40,9 @@ class CMyEnumMedia: public IEnumMediaTypes{
 	CMyPin* pPin;
 	unsigned cur;
 public:
-	std::vector<AM_MEDIA_TYPE> mts;
+	std::vector<CMediaType> mts;
 	CMyEnumMedia(CMyPin* p): pPin(p), cur(0){}
+	~CMyEnumMedia();
 	STDMETHODIMP GetClassID(__RPC__out CLSID *pClassID);
 	STDMETHODIMP QueryInterface(REFIID riid, void ** ppv);
 	STDMETHODIMP Next(ULONG c, AM_MEDIA_TYPE **ppMt, ULONG *pc);
@@ -48,9 +59,6 @@ public:
 	bool isConnected;
 	IPin* to;
 	IMemInputPin* toMem;
-
-	AM_MEDIA_TYPE mediaType;
-public:
 	CMyEnumMedia enumMedia;
 
 	CMyPin(CMySrc* s);
@@ -59,9 +67,9 @@ public:
 	STDMETHODIMP QueryInterface(REFIID riid, void ** ppv);
 	STDMETHODIMP Connect(IPin *pReceivePin, const AM_MEDIA_TYPE *pmt);
 	STDMETHODIMP ReceiveConnection(IPin *pConnector, const AM_MEDIA_TYPE *pmt){ return E_NOTIMPL; }
-	STDMETHODIMP Disconnect(){ return S_OK; }
+	STDMETHODIMP Disconnect(){ isConnected = false; return S_OK; }
 	STDMETHODIMP ConnectedTo(IPin **pPin){ if(pPin) *pPin = to; return S_OK; }
-	STDMETHODIMP ConnectionMediaType(AM_MEDIA_TYPE *pmt){ if(pmt) *pmt = mediaType; return S_OK; }
+	STDMETHODIMP ConnectionMediaType(AM_MEDIA_TYPE *pmt);
 	STDMETHODIMP QueryPinInfo(PIN_INFO *pInfo);
 	STDMETHODIMP QueryDirection(PIN_DIRECTION *pPinDir){ if(pPinDir) *pPinDir=PINDIR_OUTPUT; return S_OK; }
 	STDMETHODIMP QueryId(LPWSTR *id){ if(id) *id=L"out"; return S_OK; }
@@ -72,6 +80,7 @@ public:
 	STDMETHODIMP BeginFlush(){ return S_OK; }
 	STDMETHODIMP EndFlush(){ return S_OK; }
 	STDMETHODIMP NewSegment(REFERENCE_TIME tStart, REFERENCE_TIME tStop, double dRate){ return S_OK; }
+	bool WaitForMediaType();
 };
 
 class CMySrc;
@@ -94,6 +103,7 @@ public:
 class CMySrc: public IBaseFilter{
 public:
 	IFilterGraph* pGraph;
+	IReferenceClock* pClock;
 	FILTER_STATE state;
 	CMyEnumPins enumPins;
 	CMyPin pin;

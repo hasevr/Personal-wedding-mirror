@@ -1,16 +1,20 @@
 #include "Sender.h"
 #include "Packet.h"
 #include <iostream>
+#include <conio.h>
+#include <assert.h>
 
 
 STDMETHODIMP CMySGCBSend::SampleCB( double SampleTime, IMediaSample * pSample ){
-	send(sockSend, (char*)&mediaType, sizeof(mediaType), MSG_DONTROUTE);
+	//	MediaTypeの送信
+	send(sockSend, (char*)&mediaType, sizeof(mediaType) + mediaType.mt.cbFormat, MSG_DONTROUTE);
 
 	BYTE* data=NULL;
 	pSample->GetPointer(&data);
 	int len = pSample->GetSize();
 	static PMediaLen lenPacket;
-	lenPacket.len = len;
+	lenPacket.bufferSize = pSample->GetSize();
+	lenPacket.length = pSample->GetActualDataLength();
 	send(sockSend, (char*)&lenPacket, sizeof(lenPacket), MSG_DONTROUTE);
 	
 	int nP = (len+1023)/1024;
@@ -118,8 +122,10 @@ bool DShowSender::Init(char* cameraName){
 	pSGrab->SetCallback(&callBack, 0);  // 第2引数でコールバックを指定 (0:SampleCB, 1:BufferCB)
 
 	//	メディアタイプの取得
+	callBack.mediaType.mt = CMediaType();
 	pSrcOut->ConnectionMediaType(&callBack.mediaType.mt);
-	send(callBack.sockSend, (char*)&callBack.mediaType, sizeof(callBack.mediaType), MSG_DONTROUTE);
+	assert(callBack.mediaType.mt.cbFormat < sizeof(callBack.mediaType.format));
+	memcpy(callBack.mediaType.format, callBack.mediaType.mt.pbFormat, callBack.mediaType.mt.cbFormat);
 
 	// 5. キャプチャ開始
 	pGraph->QueryInterface(IID_IMediaControl, (void **)&pMediaControl);
@@ -130,6 +136,9 @@ bool DShowSender::Init(char* cameraName){
 
 int main(){
 	dshowSender.Init("Logicool Qcam Pro 9000");
-	std::cin.get();
+	while(1){
+		char ch = _getch();
+		if (ch == 0x1b || ch=='q') break;
+	}
 	dshowSender.Release();
 }

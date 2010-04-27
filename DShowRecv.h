@@ -4,16 +4,22 @@
 
 class CMySrcRecv:public CMySrc{
 public:
-	unsigned char* pMediaBuf;
+	volatile bool bStopThread;
 	PMediaData pdata;
 	PMediaLen plen;
 	PMediaType ptype;
 	WBSocket sockRecv;
+	IMemAllocator* pAlloc;
+	IMediaSample* pSample;
+	int bufferSize;
 	CMySrcRecv();
 	~CMySrcRecv();
 	void Init();
 	bool Recv();
+	void StopThread();
 };
+
+#if 0
 class CMySampleRecv: public CMyMediaSample{
 public:
 	CMySrcRecv* pSrc;
@@ -22,7 +28,7 @@ public:
 	STDMETHODIMP GetPointer(BYTE** pBuf);
 	STDMETHODIMP_(long) GetSize();
 };
-
+#endif
 
 class CMySGCBRecv : public CMySampleGrabberCB{
 public:

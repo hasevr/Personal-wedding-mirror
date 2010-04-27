@@ -1,6 +1,42 @@
 #include "DShowFilter.h"
 #pragma comment(lib, "strmiids.lib")
+#pragma comment(lib, "Quartz.lib") 
+#include <Base/Affine.h>
 #include <iostream>
+
+//----------------------------------------------------------------------------------------
+//	CMyMediaSample
+//
+CMediaType::CMediaType(){
+	ZeroMemory(this, sizeof(*this));
+}
+
+CMediaType::CMediaType(const CMediaType& m){
+	memcpy(this, &m, sizeof(m));
+	if (m.pbFormat){
+		pbFormat = (BYTE*)CoTaskMemAlloc(m.cbFormat);
+		memcpy(pbFormat, m.pbFormat, m.cbFormat);
+	}
+}
+CMediaType::CMediaType(const AM_MEDIA_TYPE& m){
+	memcpy(this, &m, sizeof(m));
+	if (m.pbFormat){
+		pbFormat = (BYTE*)CoTaskMemAlloc(m.cbFormat);
+		memcpy(pbFormat, m.pbFormat, m.cbFormat);
+	}
+}
+CMediaType::~CMediaType(){
+	CoTaskMemFree(pbFormat);
+}
+CMediaType& CMediaType::operator=(const AM_MEDIA_TYPE& m){
+	CoTaskMemFree(pbFormat);
+	memcpy(this, &m, sizeof(m));
+	if (m.pbFormat){
+		pbFormat = (BYTE*)CoTaskMemAlloc(m.cbFormat);
+		memcpy(pbFormat, m.pbFormat, m.cbFormat);
+	}
+	return *this;
+}
 
 //----------------------------------------------------------------------------------------
 //	CMyMediaSample
@@ -17,6 +53,8 @@ STDMETHODIMP CMyMediaSample::QueryInterface(REFIID riid, void ** ppv){
 //----------------------------------------------------------------------------------------
 //	CMyEnumMedia
 //
+CMyEnumMedia::~CMyEnumMedia(){
+}
 STDMETHODIMP CMyEnumMedia::GetClassID(CLSID *pClassID){
 	memcpy(pClassID->Data4, "CMyEnumMedia", 8);
 	return S_OK;
@@ -33,17 +71,44 @@ STDMETHODIMP CMyEnumMedia::Next(ULONG c, AM_MEDIA_TYPE** pp, ULONG* pc){
 		if (pc) *pc = 0;		
 		return E_FAIL;
 	}
-	if (pc) *pc= 1;
+	if (c>mts.size()-cur) c = mts.size()-cur;
+	if (pc) *pc= c;
 	if (pp){
-		*pp = &mts[cur];
+		for(unsigned i=0; i<c; ++i){
+			pp[i] = (AM_MEDIA_TYPE*)CoTaskMemAlloc(sizeof(AM_MEDIA_TYPE));
+			memcpy(pp[i], &mts[cur+i], sizeof(AM_MEDIA_TYPE));
+			pp[i]->pbFormat = (BYTE*)CoTaskMemAlloc(mts[cur+i].cbFormat);
+			memcpy(pp[i]->pbFormat, mts[cur+i].pbFormat, mts[cur+i].cbFormat);
+		}
 	}	
-	cur ++;
+	cur += c;
 	return NOERROR;
 }
 //----------------------------------------------------------------------------------------
 //	CMyPin
 //
+bool CMyPin::WaitForMediaType(){
+	for(int i=0; i<100; ++i){
+		if (enumMedia.mts.size()) return true;
+		Sleep(100);
+	}
+	return false;
+}
+
 CMyPin::CMyPin(CMySrc* s):pSrc(s), isConnected(false), to(NULL), toMem(NULL), enumMedia(this){
+}
+STDMETHODIMP CMyPin::ConnectionMediaType(AM_MEDIA_TYPE *pmt){ 
+	if(pmt){
+		if (WaitForMediaType()){
+			memcpy(pmt, &enumMedia.mts[0], sizeof(enumMedia.mts[0]));
+			if (pmt->pbFormat){
+				pmt->pbFormat = (BYTE*)CoTaskMemAlloc(enumMedia.mts[0].cbFormat);
+				memcpy(pmt->pbFormat, enumMedia.mts[0].pbFormat, enumMedia.mts[0].cbFormat);
+			}
+		}
+		return S_OK;
+	}
+	return VFW_E_TIMEOUT;
 }
 
 STDMETHODIMP CMyPin::QueryInterface(REFIID riid, void ** ppv){
@@ -54,6 +119,7 @@ STDMETHODIMP CMyPin::QueryInterface(REFIID riid, void ** ppv){
 	return E_NOINTERFACE;
 }
 STDMETHODIMP CMyPin::EnumMediaTypes(IEnumMediaTypes **ppEnum){
+	WaitForMediaType();
 	*ppEnum = &enumMedia;
 	return S_OK;
 }
@@ -68,8 +134,19 @@ STDMETHODIMP CMyPin::Connect(struct IPin *pin, struct _AMMediaType const * mt){
 	if (to){
 		to->QueryInterface(IID_IMemInputPin, (void**)&toMem);
 	}
-	if(mt) mediaType = *mt;
-	return to->ReceiveConnection(this, mt);
+	if (!mt){
+		WaitForMediaType();
+		mt = &enumMedia.mts[0];
+	}
+	HRESULT hr = to->ReceiveConnection(this, mt);
+	if (hr == S_OK){
+		isConnected = true;
+	}else{
+		TCHAR buf[1024];
+		AMGetErrorText(hr, buf, sizeof(buf));
+		DSTR << "CMyPin::Connect() Failed:" << buf << std::endl;
+	}
+	return hr;
 }
 STDMETHODIMP CMyPin::QueryPinInfo(PIN_INFO *pInfo){
 	if (pInfo){
@@ -109,7 +186,7 @@ STDMETHODIMP CMyEnumPins::Next(ULONG cPins, IPin **ppPins, ULONG *pcFetched){
 //----------------------------------------------------------------------------------------
 //	CMySrc
 //
-CMySrc::CMySrc():pGraph(NULL), pin(this), enumPins(this){ 
+CMySrc::CMySrc():pGraph(NULL),pClock(NULL), pin(this), enumPins(this){ 
 	enumPins.pins.push_back(&pin); 
 /*	AM_MEDIA_TYPE mt;
 	mt.bFixedSizeSamples = false;
@@ -149,8 +226,11 @@ STDMETHODIMP CMySrc::GetState(DWORD dwMilliSecsTimeout, FILTER_STATE *pState){
 	*pState = state;
 	return NOERROR;	
 }
-STDMETHODIMP CMySrc::SetSyncSource(IReferenceClock *pClock){
-	return E_NOTIMPL;
+STDMETHODIMP CMySrc::SetSyncSource(IReferenceClock *p){
+	if (pClock) pClock->Release();
+	pClock = p;
+	if (pClock) pClock->AddRef();
+	return NOERROR;
 }
 STDMETHODIMP CMySrc::GetSyncSource(IReferenceClock **pClock){
 	return E_NOTIMPL;
@@ -332,13 +412,16 @@ bool DShowCap::Init(char* cameraName){
 	//       ↑A     ↑B       ↑C
 	IPin *pSrcOut = GetPin(pSrc, PINDIR_OUTPUT);	// A
 	IPin *pSGrabIN = GetPin(pF, PINDIR_INPUT);		// B
+	IPin *pSGrabOut = GetPin(pF, PINDIR_OUTPUT);	// C
 	pGraph->Connect(pSrcOut, pSGrabIN);
+	pGraph->Render(pSGrabOut);
 
 	// 4-5. グラバのモードを適切に設定
 	pSGrab->SetBufferSamples(FALSE);
 	pSGrab->SetOneShot(FALSE);
 	pSGrab->SetCallback(&callBack, 0);  // 第2引数でコールバックを指定 (0:SampleCB, 1:BufferCB)
 
+	Sleep(1000);
 	// 5. キャプチャ開始
 	pGraph->QueryInterface(IID_IMediaControl, (void **)&pMediaControl);
 	pMediaControl->Run();
@@ -347,6 +430,7 @@ bool DShowCap::Init(char* cameraName){
 }
 void DShowCap::Release(){
 	// 6. 終了
+
 	if (rotId) RemoveFromRot(rotId);
 	if(pSrc) pSrc->Release();
 	if(pMediaControl) pMediaControl->Release();

@@ -9,17 +9,20 @@
 
 DShowRecv dshowRecv;
 
-CMySrcRecv::CMySrcRecv(){
-	pMediaBuf=NULL;
+CMySrcRecv::CMySrcRecv():pAlloc(NULL), pSample(NULL), bufferSize(0){
+	bStopThread = false;
 }
 CMySrcRecv::~CMySrcRecv(){
-	delete pMediaBuf;
+	if(pSample) pSample->Release();
+	pSample=NULL;
 }
 DWORD WINAPI thread(void* p){
-	CMySrcRecv*This = (CMySrcRecv*)p;
-	while(1){
+	CMySrcRecv* This = (CMySrcRecv*)p;
+	while(!This->bStopThread){
 		This->Recv();
 	}
+	This->bStopThread = false;
+	return 0;
 }
 void CMySrcRecv::Init(){
 	sockRecv.Init(AF_INET, SOCK_DGRAM, 0);
@@ -33,34 +36,92 @@ void CMySrcRecv::Init(){
 		sockRecv = INVALID_SOCKET;
 		exit(0);
 	}
-	delete pMediaBuf;
-	pMediaBuf = new unsigned char[1024 * 768 * 4];
 	CreateThread(NULL, 0, thread, this, 0, NULL);
 }
+void CMySrcRecv::StopThread(){
+	bStopThread = true;
+	for(int i=0; i<100&&bStopThread; ++i) Sleep(100);
+}
+
 bool CMySrcRecv::Recv(){
 	unsigned char buf[2048];
 	WBSockAddr adr;
 	sockRecv.RecvFrom(buf, sizeof(buf), adr);
-	if (buf[0] == pdata.packetId[0]){		
-		if (pMediaBuf){
-			PMediaData* pData = (PMediaData*)buf;
-			memcpy(pMediaBuf+ pData->count*1024, pData->data, 1024);
+	if (buf[0] == pdata.packetId[0]){
+		if (pSample){
+			BYTE* ptr=NULL;
+			pSample->GetPointer(&ptr);
+			if (ptr){
+				PMediaData* pData = (PMediaData*)buf;
+				memcpy(ptr + pData->count*1024, pData->data, 1024);
+			}
 		}
 	}else if(buf[0] == plen.packetId[0]){
 		//	1回前のバッファを送信
-		static CMySampleRecv ms(this);
-		if (pin.isConnected) pin.toMem->Receive(&ms);
+		FILTER_STATE state=State_Stopped;
+		GetState(100, &state);
+		if (plen.length && pin.isConnected && state == State_Running && pSample){
+			REFERENCE_TIME time, endTime;
+			pClock->GetTime(&time);
+			endTime = time+10000000/30;
+			pSample->SetTime(&time, &endTime);
+			HRESULT hr = pin.toMem->Receive(pSample);
+			if (hr!=S_OK){
+				TCHAR buf[1024];
+				AMGetErrorText(hr, buf, sizeof(buf));
+				DSTR << "CMySrcRecv::Recv(): " << buf << std::endl;
+			}
+		}
 		
 		//	次のバッファの長さを取得
 		memcpy(&plen, buf, sizeof(plen));
-		int bufLen = (plen.len+1023)/1024*1024;
+		if (bufferSize != plen.bufferSize && pin.toMem){
+			assert(!pAlloc);
+			HRESULT hr = pin.toMem->GetAllocator(&pAlloc);
+			ALLOCATOR_PROPERTIES prop = {4, 0, 8, 0}, act={0,0,8,0};
+			prop.cbBuffer = plen.bufferSize;
+			hr = pAlloc->SetProperties(&prop, &act);
+			hr = pin.toMem->NotifyAllocator(pAlloc, false);
+			hr = pAlloc->Commit();
+			bufferSize = plen.bufferSize;
+		}
+		if(pAlloc && pClock){
+			if (pSample){
+				pSample->Release();
+				pSample=NULL;
+			}
+			HRESULT hr = pAlloc->GetBuffer(&pSample, NULL, NULL, 0);
+			if (hr != S_OK){
+				TCHAR buf[1024];
+				AMGetErrorText(hr, buf, sizeof(buf));
+				DSTR << "CMySrcRecv::Recv(): " << buf << std::endl;				
+			}
+			if (pSample){
+				pSample->SetActualDataLength(plen.length);
+				pSample->SetDiscontinuity(false);
+				pSample->SetPreroll(false);
+				pSample->SetSyncPoint(true);
+			}
+		}
 		return false;
 	}else if(buf[0] == ptype.packetId[0]){
 		memcpy(&ptype, buf, sizeof(ptype));
+		unsigned i;
+		for(i=0; i<pin.enumMedia.mts.size(); ++i){
+			if (memcmp(&pin.enumMedia.mts[i], &ptype.mt, sizeof(AM_MEDIA_TYPE)-8)==0) break;
+		}
+		if (i == pin.enumMedia.mts.size()) {
+			CMediaType mt;
+			memcpy(&mt, &ptype.mt, sizeof(AM_MEDIA_TYPE));
+			mt.pbFormat = (BYTE*)CoTaskMemAlloc(ptype.mt.cbFormat);
+			memcpy(mt.pbFormat, ptype.format, ptype.mt.cbFormat);
+			pin.enumMedia.mts.push_back(mt);
+		}
 	}
 	return true;
 }
 
+#if 0
 STDMETHODIMP CMySampleRecv::GetMediaType(AM_MEDIA_TYPE ** ppMedia){
 	*ppMedia = &pSrc->ptype.mt;
 	return S_OK;
@@ -70,9 +131,9 @@ STDMETHODIMP CMySampleRecv::GetPointer(BYTE** pBuf){
 	return S_OK;
 }
 STDMETHODIMP_(long) CMySampleRecv::GetSize(){
-	return pSrc->plen.len;
+	return pSrc->plen.length;
 }
-
+#endif
 
 
 //----------------------------------------------------------------------------------------
@@ -104,9 +165,10 @@ bool DShowRecv::Init(char* cameraName){
 
 	// 1. フィルタグラフ作成
 	CoCreateInstance(CLSID_FilterGraph, NULL, CLSCTX_INPROC, IID_IGraphBuilder, (void **)&pGraph);
+	AddToRot(pGraph, &rotId);
 
 	// 2. ソースフィルタ（カメラ）の取得
-#if 1
+#if 0
 	pSrc = FindSrc(cameraName);
 #else
 	pSrc = &mySrc;
@@ -121,16 +183,30 @@ bool DShowRecv::Init(char* cameraName){
 	ISampleGrabber *pSGrab;
 	CoCreateInstance(CLSID_SampleGrabber, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (LPVOID *)&pF);
 	pF->QueryInterface(IID_ISampleGrabber, (void **)&pSGrab);
+	AM_MEDIA_TYPE mt;
+	ZeroMemory(&mt, sizeof(mt));
+	mt.majortype = MEDIATYPE_Video;
+	mt.subtype = MEDIASUBTYPE_RGB24;
+	pSGrab->SetMediaType(&mt);
 
 	// 4-3. フィルタグラフへ追加
 	pGraph->AddFilter(pF, L"Grabber");
-
+	for(int i=0; i<100&& !mySrc.pin.enumMedia.mts.size(); ++i){
+		Sleep(10);
+	}
 	// 4-4. サンプルグラバの接続
 	// [pSrc](o) -> (i)[pF](o) -> [VideoRender]
 	//       ↑A     ↑B       ↑C
 	IPin *pSrcOut = GetPin(pSrc, PINDIR_OUTPUT);	// A
 	IPin *pSGrabIN = GetPin(pF, PINDIR_INPUT);		// B
-	pGraph->Connect(pSrcOut, pSGrabIN);
+	IPin *pSGrabOut = GetPin(pF, PINDIR_OUTPUT);	// C
+	HRESULT hr = pGraph->Connect(pSrcOut, pSGrabIN);
+	if (hr){
+		TCHAR buf[1024];
+		AMGetErrorText(hr, buf, sizeof(buf));
+		DSTR << "DShowRecv Connect() Failed:" << buf << std::endl;
+	}
+//	pGraph->Render(pSGrabOut);
 
 	// 4-5. グラバのモードを適切に設定
 	pSGrab->SetBufferSamples(FALSE);
@@ -139,11 +215,17 @@ bool DShowRecv::Init(char* cameraName){
 
 	// 5. キャプチャ開始
 	pGraph->QueryInterface(IID_IMediaControl, (void **)&pMediaControl);
-	pMediaControl->Run();
+	hr = pMediaControl->Run();
+	if (hr != S_OK){
+		TCHAR buf[1024];
+		AMGetErrorText(hr, buf, sizeof(buf));
+		DSTR << "DShowRecv Run() Failed:" << buf << std::endl;
+	}
 
 	return true;
 }
 void DShowRecv::Release(){
+	mySrc.StopThread();
 	// 6. 終了
 	if(pSrc) pSrc->Release();
 	if(pMediaControl) pMediaControl->Release();
