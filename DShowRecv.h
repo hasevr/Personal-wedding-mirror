@@ -6,8 +6,7 @@ class CMySrcRecv:public CMySrc{
 public:
 	volatile bool bStopThread;
 	PMediaData pdata;
-	PMediaLen plen;
-	PMediaType ptype;
+	PMediaTypeAndLen ptype;
 	WBSocket sockRecv;
 	IMemAllocator* pAlloc;
 	IMediaSample* pSample;

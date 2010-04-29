@@ -287,6 +287,7 @@ void Contents::Capture(unsigned char* src, unsigned len){
 		nc = 3;
 		if (len==640*480*nc){ wIn=640; hIn=480;}
 		else if (len==320*240*nc){ wIn=320; hIn=240;}
+		else if (len==160*120*nc){ wIn=160; hIn=120;}
 		else {
 			DSTR << "unknown size: len: " << len << " = 640*" << len/640 
 				<< " = 400*" << len/400 << 

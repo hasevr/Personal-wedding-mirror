@@ -56,11 +56,25 @@ bool CMySrcRecv::Recv(){
 				memcpy(ptr + pData->count*1024, pData->data, 1024);
 			}
 		}
-	}else if(buf[0] == plen.packetId[0]){
+	}else if(buf[0] == ptype.packetId[0]){	//	メディアタイプと長さ	
+		memcpy(&ptype, buf, sizeof(ptype));
+		//	メディアタイプの追加
+		unsigned i;
+		for(i=0; i<pin.enumMedia.mts.size(); ++i){
+			if (memcmp(&pin.enumMedia.mts[i], &ptype.mt, sizeof(AM_MEDIA_TYPE)-8)==0) break;
+		}
+		if (i == pin.enumMedia.mts.size()) {
+			CMediaType mt;
+			memcpy(&mt, &ptype.mt, sizeof(AM_MEDIA_TYPE));
+			mt.pbFormat = (BYTE*)CoTaskMemAlloc(ptype.mt.cbFormat);
+			memcpy(mt.pbFormat, ptype.format, ptype.mt.cbFormat);
+			pin.enumMedia.mts.push_back(mt);
+		}
+
 		//	1回前のバッファを送信
 		FILTER_STATE state=State_Stopped;
 		GetState(100, &state);
-		if (plen.length && pin.isConnected && state == State_Running && pSample){
+		if (ptype.length && pin.isConnected && state == State_Running && pSample){
 			REFERENCE_TIME time, endTime;
 			pClock->GetTime(&time);
 			endTime = time+10000000/30;
@@ -74,16 +88,15 @@ bool CMySrcRecv::Recv(){
 		}
 		
 		//	次のバッファの長さを取得
-		memcpy(&plen, buf, sizeof(plen));
-		if (bufferSize != plen.bufferSize && pin.toMem){
+		if (bufferSize != ptype.bufferSize && pin.toMem){
 			assert(!pAlloc);
 			HRESULT hr = pin.toMem->GetAllocator(&pAlloc);
 			ALLOCATOR_PROPERTIES prop = {4, 0, 8, 0}, act={0,0,8,0};
-			prop.cbBuffer = plen.bufferSize;
+			prop.cbBuffer = ptype.bufferSize;
 			hr = pAlloc->SetProperties(&prop, &act);
 			hr = pin.toMem->NotifyAllocator(pAlloc, false);
 			hr = pAlloc->Commit();
-			bufferSize = plen.bufferSize;
+			bufferSize = ptype.bufferSize;
 		}
 		if(pAlloc && pClock){
 			if (pSample){
@@ -97,7 +110,7 @@ bool CMySrcRecv::Recv(){
 				DSTR << "CMySrcRecv::Recv(): " << buf << std::endl;				
 			}
 			if (pSample){
-				pSample->SetActualDataLength(plen.length);
+				pSample->SetActualDataLength(ptype.length);
 				pSample->SetDiscontinuity(false);
 				pSample->SetPreroll(false);
 				pSample->SetSyncPoint(true);
@@ -105,18 +118,6 @@ bool CMySrcRecv::Recv(){
 		}
 		return false;
 	}else if(buf[0] == ptype.packetId[0]){
-		memcpy(&ptype, buf, sizeof(ptype));
-		unsigned i;
-		for(i=0; i<pin.enumMedia.mts.size(); ++i){
-			if (memcmp(&pin.enumMedia.mts[i], &ptype.mt, sizeof(AM_MEDIA_TYPE)-8)==0) break;
-		}
-		if (i == pin.enumMedia.mts.size()) {
-			CMediaType mt;
-			memcpy(&mt, &ptype.mt, sizeof(AM_MEDIA_TYPE));
-			mt.pbFormat = (BYTE*)CoTaskMemAlloc(ptype.mt.cbFormat);
-			memcpy(mt.pbFormat, ptype.format, ptype.mt.cbFormat);
-			pin.enumMedia.mts.push_back(mt);
-		}
 	}
 	return true;
 }

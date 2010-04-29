@@ -4,7 +4,7 @@
 
 class CMySGCBSend : public CMySampleGrabberCB{
 public:
-	PMediaType mediaType;
+	PMediaTypeAndLen mediaType;
 	WBSocket sockSend;
 	WBSockAddr adrBcast;
 	STDMETHODIMP SampleCB( double SampleTime, IMediaSample * pSample );

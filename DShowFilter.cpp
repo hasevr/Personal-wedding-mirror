@@ -499,3 +499,39 @@ void RemoveFromRot(DWORD pdwRegister)
         pROT->Release();
     }
 }
+
+
+
+
+//---------------------------------------------------------------------------------------
+//	Duebug用ツール　GUIDの名前リスト
+//
+typedef struct {
+    CHAR   *szName;
+    GUID    guid;
+} GUID_STRING_ENTRY;
+GUID_STRING_ENTRY g_GuidNames[] = {
+#define OUR_GUID_ENTRY(name, l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8) \
+{ #name, { l, w1, w2, { b1, b2,  b3,  b4,  b5,  b6,  b7,  b8 } } },
+    #include <uuids.h>
+};
+
+CGuidNameList GuidNames;
+int g_cGuidNames = sizeof(g_GuidNames) / sizeof(g_GuidNames[0]);
+
+char *CGuidNameList::operator [] (const GUID &guid)
+{
+    for (int i = 0; i < g_cGuidNames; i++) {
+        if (g_GuidNames[i].guid == guid) {
+            return g_GuidNames[i].szName;
+        }
+    }
+    if (guid == GUID_NULL) {
+        return "GUID_NULL";
+    }
+
+// !!! add something to print FOURCC guids?
+
+// shouldn't this print the hex CLSID?
+    return "Unknown GUID Name";
+}

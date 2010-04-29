@@ -162,3 +162,10 @@ IPin *GetPin(IBaseFilter *pFilter, PIN_DIRECTION PinDir);
 HRESULT AddToRot(IUnknown *pUnkGraph, DWORD *pdwRegister);
 ///	ランタイムオブジェクトからの登録解除pdwRegister は 登録時のID
 void RemoveFromRot(DWORD pdwRegister);
+
+//	GUIDの名前リスト
+class CGuidNameList {
+    public:
+        CHAR *operator [] (const GUID& guid);
+};
+extern CGuidNameList GuidNames;
