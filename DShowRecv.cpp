@@ -36,13 +36,15 @@ void CMySrcRecv::Init(){
 		sockRecv = INVALID_SOCKET;
 		exit(0);
 	}
-	CreateThread(NULL, 0, thread, this, 0, NULL);
+	HANDLE hTh = CreateThread(NULL, 0, thread, this, 0, NULL);
+	SetThreadPriority(hTh, THREAD_PRIORITY_TIME_CRITICAL);
 }
 void CMySrcRecv::StopThread(){
 	bStopThread = true;
 	for(int i=0; i<100&&bStopThread; ++i) Sleep(100);
 }
 
+static bool flags[1000];
 bool CMySrcRecv::Recv(){
 	unsigned char buf[2048];
 	WBSockAddr adr;
@@ -54,6 +56,7 @@ bool CMySrcRecv::Recv(){
 			if (ptr){
 				PMediaData* pData = (PMediaData*)buf;
 				memcpy(ptr + pData->count*1024, pData->data, 1024);
+				flags[pData->count] = true;
 			}
 		}
 	}else if(buf[0] == ptype.packetId[0]){	//	メディアタイプと長さ	
@@ -72,9 +75,18 @@ bool CMySrcRecv::Recv(){
 		}
 
 		//	1回前のバッファを送信
+		bool bOK= true;
+		for(int i=0; i<(ptype.length+1023)/1024 ; ++i){
+			if (!flags[i]){
+				std::cout << i << " ";
+				bOK = false;
+			}
+			flags[i] = false;
+		}
+		std::cout << "/" << (ptype.length+1023)/1024 << std::endl;
 		FILTER_STATE state=State_Stopped;
 		GetState(100, &state);
-		if (ptype.length && pin.isConnected && state == State_Running && pSample){
+		if (bOK && ptype.length && pin.isConnected && state == State_Running && pSample){
 			REFERENCE_TIME time, endTime;
 			pClock->GetTime(&time);
 			endTime = time+10000000/30;
@@ -105,6 +117,10 @@ bool CMySrcRecv::Recv(){
 			}
 			HRESULT hr = pAlloc->GetBuffer(&pSample, NULL, NULL, 0);
 			if (hr != S_OK){
+				hr = pAlloc->Commit();
+				hr = pAlloc->GetBuffer(&pSample, NULL, NULL, 0);
+			}
+			if (hr != S_OK){
 				TCHAR buf[1024];
 				AMGetErrorText(hr, buf, sizeof(buf));
 				DSTR << "CMySrcRecv::Recv(): " << buf << std::endl;				
@@ -117,7 +133,6 @@ bool CMySrcRecv::Recv(){
 			}
 		}
 		return false;
-	}else if(buf[0] == ptype.packetId[0]){
 	}
 	return true;
 }

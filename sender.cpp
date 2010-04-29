@@ -15,6 +15,16 @@ STDMETHODIMP CMySGCBSend::SampleCB( double SampleTime, IMediaSample * pSample ){
 	mediaType.bufferSize = pSample->GetSize();
 	mediaType.length = pSample->GetActualDataLength();
 	send(sockSend, (char*)&mediaType, sizeof(mediaType), MSG_DONTROUTE);
+	static int count = 0;
+	static DWORD lastTime;
+	count ++;
+	if (count >= 30){
+		count = 0;
+		DWORD time = GetTickCount();
+		int dt = (int)time - (int)lastTime;
+		lastTime = time;
+		std::cout << "Len:" << mediaType.length << " Sz:" << mediaType.bufferSize << "  30frame / " << dt << " msec" << std::endl;
+	}
 	
 	int nP = (mediaType.length+1023)/1024;
 	static PMediaData packet;
@@ -23,7 +33,12 @@ STDMETHODIMP CMySGCBSend::SampleCB( double SampleTime, IMediaSample * pSample ){
 		for(i=0; i<nP-1; ++i){
 			packet.count = i;
 			memcpy(packet.data, data+i*1024, 1024);
-			send(sockSend, (char*)&packet, sizeof(packet), MSG_DONTROUTE);
+			for(int t=0; t<10; ++t){
+				int rv = send(sockSend, (char*)&packet, sizeof(packet), MSG_DONTROUTE);
+				if (rv != SOCKET_ERROR)	break;
+				std::cout << "Retry packet " << i << " " << t << std::endl;
+			}
+			if (i%3==0) Sleep(2);
 		}
 		packet.count = i;
 		memcpy(packet.data, data+i*1024, mediaType.length%1024);
@@ -116,6 +131,8 @@ bool DShowSender::Init(char* cameraName){
 	
 	//	ˆ³kƒtƒBƒ‹ƒ^‚Ì¶¬
 	IBaseFilter* pComp=NULL;
+//	WBGuid xvid(D76E2820-1563-11CF-AC98-00AA004C0FA9");
+//	CoCreateInstance(xvid, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (LPVOID *)&pComp);
 	CoCreateInstance(CLSID_MJPGEnc, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (LPVOID *)&pComp);
 	pGraph->AddFilter(pComp, L"MJPG Compressor");
 
@@ -132,7 +149,7 @@ bool DShowSender::Init(char* cameraName){
 #if 1	//	ˆ³k‚ÌÝ’è
 	IAMVideoCompression* pVc=NULL;
 	pCompOut->QueryInterface(IID_IAMVideoCompression, (void**)&pVc);
-	hr = pVc->put_Quality(0.3);
+	hr = pVc->put_Quality(0.2);
 	pVc->Release();
 #endif
 
@@ -153,8 +170,8 @@ bool DShowSender::Init(char* cameraName){
 			char *name=GuidNames[pmt->subtype];
 			std::cout << name << std::endl;
 //			if (vh->bmiHeader.biWidth == 160 && vh->bmiHeader.biHeight == 120){
-			if (vh->bmiHeader.biWidth == 320 && vh->bmiHeader.biHeight == 240){
-//			if (vh->bmiHeader.biWidth == 640 && vh->bmiHeader.biHeight == 480){
+//			if (vh->bmiHeader.biWidth == 320 && vh->bmiHeader.biHeight == 240){
+			if (vh->bmiHeader.biWidth == 640 && vh->bmiHeader.biHeight == 480){
 				pSc->SetFormat(pmt);
 				CoTaskMemFree(pmt->pbFormat);
 				CoTaskMemFree(pmt);

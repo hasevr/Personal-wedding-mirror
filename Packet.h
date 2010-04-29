@@ -2,16 +2,6 @@
 #define PACKET_H
 
 enum Ports{ PORT_SEND = 11000 };
-/*
-struct PMediaLen{
-	char packetId[4];
-	int bufferSize;
-	int length;
-	PMediaLen():length(0), bufferSize(0){
-		packetId[0] = 'l';
-	}
-};
-*/
 struct PMediaTypeAndLen{
 	char packetId[4];
 	int bufferSize;
