@@ -117,9 +117,35 @@ bool DShowSender::Init(char* cameraName){
 	pGraph->SetLogFile(h);
 
 	// 2. ソースフィルタ（カメラ）の取得
+#if 1
 	pSrc = FindSrc(cameraName);
 	if (!pSrc) return false;
 	pGraph->AddFilter(pSrc, L"Video Capture");
+#else
+	pGraph->RenderFile(L"bothhand.mpg", NULL);
+	IBaseFilter* pRender=NULL;
+	pGraph->FindFilterByName(L"Video Renderer", &pRender);
+	if (pRender){
+		IPin* pin = GetPin(pRender, PINDIR_INPUT);
+		IPin* pinSrc;
+		pin->ConnectedTo(&pinSrc);
+		PIN_INFO pi;
+		pinSrc->QueryPinInfo(&pi);
+		pSrc = pi.pFilter;
+		hr = pin->Disconnect();
+		hr = pGraph->RemoveFilter(pRender);
+	}
+	IEnumFilters* pEnum=NULL;
+	hr = pGraph->EnumFilters(&pEnum);
+	for(IBaseFilter* pGet=NULL; pEnum->Next(1, &pGet, NULL) == S_OK; ){
+		FILTER_INFO fi;
+		pGet->QueryFilterInfo(&fi);
+		char buf[1024];
+		wcstombs(buf, fi.achName, sizeof(buf));
+		std::cout << buf << std::endl;
+	}
+	if (!pSrc) return false;
+#endif
 
 	// 4. コールバックの設定
 	// 4-1. サンプルグラバの生成
@@ -131,10 +157,14 @@ bool DShowSender::Init(char* cameraName){
 	
 	//	圧縮フィルタの生成
 	IBaseFilter* pComp=NULL;
-//	WBGuid xvid(D76E2820-1563-11CF-AC98-00AA004C0FA9");
-//	CoCreateInstance(xvid, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (LPVOID *)&pComp);
+#if 0
+	WBGuid xvid("D76E2820-1563-11CF-AC98-00AA004C0FA9");
+	CoCreateInstance(xvid, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (LPVOID *)&pComp);
+	pGraph->AddFilter(pComp, L"Xvid Compressor");
+#else
 	CoCreateInstance(CLSID_MJPGEnc, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (LPVOID *)&pComp);
 	pGraph->AddFilter(pComp, L"MJPG Compressor");
+#endif
 
 	// 4-4. サンプルグラバの接続 src->comp->grab
 	// ピンの取得
@@ -157,31 +187,33 @@ bool DShowSender::Init(char* cameraName){
 #if 1	//	カメラの設定
 	IAMStreamConfig* pSc=NULL;
 	pSrcOut->QueryInterface(IID_IAMStreamConfig, (void**)&pSc);
-	int nCaps; int sizeCaps;
-	pSc->GetNumberOfCapabilities(&nCaps, &sizeCaps);
-	for(int i=0; i<nCaps; ++i){
-		AM_MEDIA_TYPE* pmt=NULL;
-		VIDEO_STREAM_CONFIG_CAPS caps;
-		assert(sizeCaps <= sizeof(caps));
-		pSc->GetStreamCaps(i, &pmt, (BYTE*)&caps);
-		if (pmt->pbFormat){
-			VIDEOINFOHEADER* vh = (VIDEOINFOHEADER*)pmt->pbFormat;
-			std::cout << i << ":\t" << vh->bmiHeader.biWidth << "x" << vh->bmiHeader.biHeight;
-			char *name=GuidNames[pmt->subtype];
-			std::cout << name << std::endl;
-//			if (vh->bmiHeader.biWidth == 160 && vh->bmiHeader.biHeight == 120){
-//			if (vh->bmiHeader.biWidth == 320 && vh->bmiHeader.biHeight == 240){
-			if (vh->bmiHeader.biWidth == 640 && vh->bmiHeader.biHeight == 480){
-				pSc->SetFormat(pmt);
-				CoTaskMemFree(pmt->pbFormat);
-				CoTaskMemFree(pmt);
-				break;
+	if(pSc){
+		int nCaps; int sizeCaps;
+		pSc->GetNumberOfCapabilities(&nCaps, &sizeCaps);
+		for(int i=0; i<nCaps; ++i){
+			AM_MEDIA_TYPE* pmt=NULL;
+			VIDEO_STREAM_CONFIG_CAPS caps;
+			assert(sizeCaps <= sizeof(caps));
+			pSc->GetStreamCaps(i, &pmt, (BYTE*)&caps);
+			if (pmt->pbFormat){
+				VIDEOINFOHEADER* vh = (VIDEOINFOHEADER*)pmt->pbFormat;
+				std::cout << i << ":\t" << vh->bmiHeader.biWidth << "x" << vh->bmiHeader.biHeight;
+				char *name=GuidNames[pmt->subtype];
+				std::cout << name << std::endl;
+	//			if (vh->bmiHeader.biWidth == 160 && vh->bmiHeader.biHeight == 120){
+	//			if (vh->bmiHeader.biWidth == 320 && vh->bmiHeader.biHeight == 240){
+				if (vh->bmiHeader.biWidth == 640 && vh->bmiHeader.biHeight == 480){
+					pSc->SetFormat(pmt);
+					CoTaskMemFree(pmt->pbFormat);
+					CoTaskMemFree(pmt);
+					break;
+				}
 			}
+			CoTaskMemFree(pmt->pbFormat);
+			CoTaskMemFree(pmt);
 		}
-		CoTaskMemFree(pmt->pbFormat);
-		CoTaskMemFree(pmt);
+		pSc->Release();
 	}
-	pSc->Release();
 #endif
 	hr = pGraph->Connect(pSrcOut, pCompIn);
 	if (hr != S_OK){
@@ -203,6 +235,11 @@ bool DShowSender::Init(char* cameraName){
 		*/
 	}
 	hr = pGraph->Connect(pCompOut, pSGrabIN);
+	if (!hr==S_OK){
+		TCHAR buf[1024];
+		AMGetErrorText(hr, buf, sizeof(buf));
+		DSTR << "CMyPin::Connect()" << hr << " : " << buf << std::endl;
+	}
 //	pGraph->Render(pSGrabOut);
 
 	// 4-5. グラバのモードを適切に設定
