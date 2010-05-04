@@ -15,11 +15,12 @@ function AddText($fn, $mess, $pos){
 	$x = imagesx($im);
 	$y = imagesy($im);
 	
-	$size = 24;
+	$size = 28;//24;
 	$angle = 0;
 //	$font = "/Windows/Fonts/HGRSMP.TTF";
-	$font = "./mika_PB.TTF";
-	$font = "./cinecaption226.ttf";
+//	$font = "./mika_PB.TTF";
+//	$font = "./cinecaption226.ttf";
+	$font = "./KFhimaji.otf";
 
 	$lines = explode("\n", $mess);
 	$lineH = 0;
