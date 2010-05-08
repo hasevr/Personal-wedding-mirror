@@ -49,9 +49,13 @@ void Contents::DrawShip(){
 		decals[i].Draw();
 	}
 	if (backs.size()){
-		double size = 120;
+		double size = 200;
 		backs.front().sheetSize = Vec2d(size, size*100)*2;
-		backs.front().texScale = Vec2d(1, 100) * 0.3;
+		if (env.drawMode == Env::DM_FRONT || env.drawMode == Env::DM_BACK){
+			backs.front().texScale = Vec2d(3, 100) * 0.1;
+		}else{
+			backs.front().texScale = Vec2d(1, 100) * 3;
+		}
 		backs.front().posture = Affined::Trn(0,0,size);
 		backs.front().posture = Affined::Rot(Rad(-90), 'x') * backs.front().posture;
 		backs.front().Draw();
@@ -216,27 +220,29 @@ void Contents::Init(){
 	Vec3d backDir = frontDir;
 	backDir.z *= -1;
 	//	‰“‚­‚©‚ç
-/*	double alpha = 1.2;
+#if 0
+	double alpha = 1.2;
 	double delta = 0.3;
 	for(int i=6; i>=0; --i){
 		pose.Pos() = frontDir * 20*pow(alpha, i);
 		paths.back().push_back(Key(0, delta, pose));
 	}
-	*/
-	double speed = 1;
+#endif
+	double speed = 0.5;
 	for(int i=0; i<2; ++i){
 		Posed pose;
 		paths.push_back(Path());
-		pose.Pos() = frontDir * 480 + Vec3d(i?40:-40, 0, 0) ;
-//		paths.back().push_back(Key(0, 12/speed, pose, 0));
-		pose.Pos() = frontDir * 300 + Vec3d(i?20:-20, 0, 0) ;
+		double scale = 63;
+		pose.Pos() = frontDir * 4*scale + Vec3d(i?10:-10, 0, 0) ;
+		paths.back().push_back(Key(0, 12/speed, pose, 0));
+		pose.Pos() = frontDir * 2.5*scale + Vec3d(i?5:-5, 0, 0) ;
 		paths.back().push_back(Key(0, 12/speed, pose));
-		pose.Pos() = frontDir * 120 + Vec3d(i?-4:4, 0, 0) ;
-		paths.back().push_back(Key(0, 3/speed, pose));
-		double yOff = 75;
-		double xOff = (i==0 ? 1 : -1)*15;
+		pose.Pos() = frontDir * 1*scale + Vec3d(i?-1:1, 0, 0) ;
+		paths.back().push_back(Key(0, 0.4/speed, pose));
+		static double yOff = 13;	//20;
+		double xOff = (i==0 ? 1 : -1)*6.2;
 		Affined af;
-		double lookDiff = -std::abs(xOff) * 200;
+		double lookDiff = -std::abs(xOff) * 10000000;	//	ŽÀ‚ÍŠ®‘S‚É…•½=–³ŒÀ”{‚Å—Ç‚¢
 
 		af.Pos() = Vec3d(xOff, yOff, 45);
 		af.LookAtGL(Vec3d(0, yOff+lookDiff, 45), Vec3d(0,1,0));
@@ -254,15 +260,15 @@ void Contents::Init(){
 
 		af.Pos() = Vec3d(xOff, yOff, -45);
 		af.LookAtGL(Vec3d(0, yOff+lookDiff, -45), Vec3d(0,1,0));
-		paths.back().push_back(Key(0, 3/speed, Posed(af)));
+		paths.back().push_back(Key(0, 0.4/speed, Posed(af)));
 
 		if (i==0) pose.Ori() = Quaterniond::Rot(Rad(180), 'y');
 		else pose.Ori() = Quaterniond::Rot(Rad(-180), 'y');
-		pose.Pos() = backDir * 120;
+		pose.Pos() = backDir * 2*scale;
 		paths.back().push_back(Key(0, 12/speed, pose));
-		pose.Pos() = backDir * 300;
+		pose.Pos() = backDir * 5*scale;
 		paths.back().push_back(Key(0, 12/speed, pose));
-		pose.Pos() = backDir * 480;
+		pose.Pos() = backDir * 8*scale;
 		paths.back().push_back(Key(1, 0, pose, 0));
 	}
 

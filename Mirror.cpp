@@ -11,13 +11,18 @@ void Config::Init(){
 	//	奥行き方向、手前、奥、各１つ減らす。
 	//	左右方向、左右それぞれ、１．５個減らす
 
-	outXRad[0] = Rad(66);
-	outXRad[1] = Rad(-66);
+//	outXRad[0] = Rad(66);
+//	outXRad[1] = Rad(-66);
+	outXRad[0] = Rad(60);
+	outXRad[1] = Rad(-60);
 	outY[0] = -1;		//	31m/2 = 15.5m だけど、 余裕を見て9mにしておく
 	outY[1] = -10.0;	//	
+	outYC[0] = -4;		//	31m/2 = 15.5m だけど、 余裕を見て9mにしておく
+	outYC[1] = -10.0;	//	
 	ceil = 4.5-0.7;	//	机の高さが70cm
 //	wall = 5.7;		//	幅13m、天井付近は細くなっているけど、13m - 0.8*2 = 11.4m くらいある
-	wall = (15/2-0.7);
+//	wall = (15/2-0.7);
+	wall = (13/2-1);
 	d = 1.2;
 	hOff = 0.05;
 	h = 0.53 - hOff;
@@ -95,17 +100,19 @@ void Cell::Init(int xIn, int yIn){
 */
 
 	double radX=0;
-	if (x==0) radX = config.outXRad[0] + (y%2?1:-1)*Rad(2.2);
-	if (x==2) radX = config.outXRad[1] + (y%2?1:-1)*Rad(2.2);
+//	if (x==0) radX = config.outXRad[0] + (y%2?1:-1)*Rad(2.2);
+//	if (x==2) radX = config.outXRad[1] + (y%2?1:-1)*Rad(2.2);
+	if (x==0) radX = config.outXRad[0];
+	if (x==2) radX = config.outXRad[1];
 	if (x==1){
-		if (y<DIVY/2) radX = -Rad(35);
-		else radX = Rad(35);
+		if (y<DIVY/2) radX = -Rad(30);
+		else radX = Rad(30);
 	}
 	outDirCenter.x = tan(radX) * config.ceil;
 	if (-config.wall<outDirCenter.x && outDirCenter.x < config.wall){
 		outDirCenter.y = config.ceil;
-		if (y < DIVY/2) outDirCenter.z = config.outY[0]+(config.outY[1]-config.outY[0])*y/((DIVY/2)-1);
-		else outDirCenter.z = config.outY[0]+(config.outY[1]-config.outY[0])*(DIVY-y-1)/((DIVY/2)-1);
+		if (y < DIVY/2) outDirCenter.z = config.outYC[0]+(config.outYC[1]-config.outYC[0])*y/((DIVY/2)-1);
+		else outDirCenter.z = config.outYC[0]+(config.outYC[1]-config.outYC[0])*(DIVY-y-1)/((DIVY/2)-1);
 	}else{
 		outDirCenter.x = outDirCenter.x>0 ? config.wall : -config.wall;
 		outDirCenter.y = tan(Rad(90)-radX) * config.wall;
@@ -207,12 +214,9 @@ void Cell::InitCamera(int fb){
 	Config& config = env.config;
 
 	if (env.cameraMode == Env::CM_WINDOW){
-		//	視点をWorldの原点に設定
-//		view[fb].Pos() = env.projPose.inv() * Vec3d(0,0,0);
-
-		//	視点を地下10m、壁の場合10m下がる
-		if(outPlace) view[fb].Pos() = env.projPose.inv() * Vec3d(0, 0, -outPlace*20);
-		view[fb].Pos() = env.projPose.inv() * Vec3d(0,-20, 0);
+		//	視点を地下10mに
+		if(outPlace) view[fb].Pos() = env.projPose.inv() * Vec3d(outPlace*5, -5, 0);
+		view[fb].Pos() = env.projPose.inv() * Vec3d(0,-5, 0);
 
 		if (outPlace){	//	壁だったら
 			view[fb].LookAtGL(Vec3d(outPlace*config.wall, view[fb].Pos().y, view[fb].Pos().z), Vec3d(0, 1, 0));
@@ -224,7 +228,11 @@ void Cell::InitCamera(int fb){
 			view[fb].Pos() = Vec3d(outPlace*(config.wall-1), outPosCenter.y, outPosCenter.z);
 			view[fb].LookAtGL(Vec3d(outPlace*config.wall, view[fb].Pos().y, view[fb].Pos().z), Vec3d(0, 1, 0));
 		}else{
-			view[fb].Pos() = Vec3d(outPosCenter.x, env.config.ceil-1, outPosCenter.z);
+			if (outPosCenter.z < -6){
+				view[fb].Pos() = Vec3d(outPosCenter.x, env.config.ceil-2, outPosCenter.z);
+			}else{
+				view[fb].Pos() = Vec3d(outPosCenter.x, env.config.ceil-1, outPosCenter.z);
+			}
 			Vec3d cnt = env.centerSeat;
 			if (fb) cnt = Affined::Rot(Rad(180), 'y') * cnt;
 			Vec3d head = (Vec3d(view[fb].Pos().x, 0, view[fb].Pos().z) - env.projPose.inv() * cnt).unit();

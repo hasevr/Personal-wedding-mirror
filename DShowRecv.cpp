@@ -184,7 +184,7 @@ bool DShowRecv::Init(char* cameraName){
 	AddToRot(pGraph, &rotId);
 
 	// 2. ソースフィルタ（カメラ）の取得
-#if 0
+#if 1
 	pSrc = FindSrc(cameraName);
 #else
 	pSrc = &mySrc;

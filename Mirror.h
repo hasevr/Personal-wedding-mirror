@@ -23,6 +23,7 @@ struct Config{
 	double outXRad[2];
 	double ceil, wall;	//	天井の高さ、中央から壁の距離
 	double outY[2];
+	double outYC[2];
 	double t;			//	サポートの板厚
 	double hSupportDepth;
 	double hSupportGroove;

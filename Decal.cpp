@@ -75,7 +75,7 @@ double Path::GetAlpha(double time){
 
 Decal::Decal(): texOffset(0,0), texScale(1,1), color(1,1,1,1){
 	id = 0;
-	sheetSize = Vec2d(4, 3)*4*2;
+	sheetSize = Vec2d(4, 3)*4;
 	time = 0;
 }
 void Decal::Draw(){
