@@ -269,8 +269,7 @@ bool DShowSender::Init(char* cameraName){
 
 
 int main(){
-//	dshowSender.Init("Logicool Qcam Pro 9000");
-	dshowSender.Init("SANYO Digital Camera");
+	dshowSender.Init("Logicool Qcam Pro 9000");
 	while(1){
 		char ch = _getch();
 		if (ch == 0x1b || ch=='q') break;

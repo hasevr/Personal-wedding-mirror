@@ -193,13 +193,14 @@ bool DShowRecv::Init(){
 
 	// 2. ソースフィルタ（カメラ）の取得
 	if (!pSrc){
-#if 0	//	単体動作時
+		//	単体動作時
 		//	"IP Camera [JPEG/MJPEG]", "Logicool Qcam Pro 9000"
 		pSrc = FindSrc("Logicool Qcam Pro 9000");
-#else	//	ネット動作時
-		pSrc = &mySrc;
-		mySrc.Init();
-#endif
+		//	カメラがなければ、ネット動作する
+		if (!pSrc){
+			pSrc = &mySrc;
+			mySrc.Init();
+		}
 	}
 	if (!pSrc) return false;
 	pGraph->AddFilter(pSrc, L"Video Capture");
