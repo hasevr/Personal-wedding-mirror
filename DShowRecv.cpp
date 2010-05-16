@@ -9,7 +9,7 @@
 
 DShowRecv dshowRecv;
 
-CMySrcRecv::CMySrcRecv():pAlloc(NULL), pSample(NULL), bufferSize(0){
+CMySrcRecv::CMySrcRecv():pAlloc(NULL), pSample(NULL), bufferSize(0), hThread(NULL){
 	bStopThread = false;
 }
 CMySrcRecv::~CMySrcRecv(){
@@ -36,12 +36,15 @@ void CMySrcRecv::Init(){
 		sockRecv = INVALID_SOCKET;
 		exit(0);
 	}
-	HANDLE hTh = CreateThread(NULL, 0, thread, this, 0, NULL);
-	SetThreadPriority(hTh, THREAD_PRIORITY_TIME_CRITICAL);
+	hThread = CreateThread(NULL, 0, thread, this, 0, NULL);
+	SetThreadPriority(hThread, THREAD_PRIORITY_TIME_CRITICAL);
 }
 void CMySrcRecv::StopThread(){
-	bStopThread = true;
-	for(int i=0; i<100&&bStopThread; ++i) Sleep(100);
+	if (hThread){
+		bStopThread = true;
+		for(int i=0; i<100&&bStopThread; ++i) Sleep(100);
+	}
+	if (!bStopThread) hThread = NULL;
 }
 
 static bool flags[1000];
@@ -175,30 +178,36 @@ STDMETHODIMP CMySGCBRecv::BufferCB( double dblSampleTime, BYTE * pBuffer, long l
 
 //---------------------------------------------------------------------------------------------
 
+DShowRecv::DShowRecv():	pSrcOut(NULL), pSGrabIn(NULL), pSGrabOut(NULL), pSGF(NULL), pSGrab(NULL){
+	bGood = false;
+}
 
-bool DShowRecv::Init(char* cameraName){
-	CoInitialize(NULL);
+bool DShowRecv::Init(){
+	if(!pGraph){	
+		CoInitialize(NULL);
 
-	// 1. フィルタグラフ作成
-	CoCreateInstance(CLSID_FilterGraph, NULL, CLSCTX_INPROC, IID_IGraphBuilder, (void **)&pGraph);
-	AddToRot(pGraph, &rotId);
+		// 1. フィルタグラフ作成
+		CoCreateInstance(CLSID_FilterGraph, NULL, CLSCTX_INPROC, IID_IGraphBuilder, (void **)&pGraph);
+		AddToRot(pGraph, &rotId);
+	}
 
 	// 2. ソースフィルタ（カメラ）の取得
-#if 1
-	pSrc = FindSrc(cameraName);
-#else
-	pSrc = &mySrc;
-	mySrc.Init();
+	if (!pSrc){
+#if 0	//	単体動作時
+		//	"IP Camera [JPEG/MJPEG]", "Logicool Qcam Pro 9000"
+		pSrc = FindSrc("Logicool Qcam Pro 9000");
+#else	//	ネット動作時
+		pSrc = &mySrc;
+		mySrc.Init();
 #endif
+	}
 	if (!pSrc) return false;
 	pGraph->AddFilter(pSrc, L"Video Capture");
 
 	// 4. コールバックの設定
 	// 4-1. サンプルグラバの生成
-	IBaseFilter *pF = NULL;
-	ISampleGrabber *pSGrab;
-	CoCreateInstance(CLSID_SampleGrabber, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (LPVOID *)&pF);
-	pF->QueryInterface(IID_ISampleGrabber, (void **)&pSGrab);
+	CoCreateInstance(CLSID_SampleGrabber, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (LPVOID *)&pSGF);
+	pSGF->QueryInterface(IID_ISampleGrabber, (void **)&pSGrab);
 	AM_MEDIA_TYPE mt;
 	ZeroMemory(&mt, sizeof(mt));
 	mt.majortype = MEDIATYPE_Video;
@@ -206,39 +215,42 @@ bool DShowRecv::Init(char* cameraName){
 	pSGrab->SetMediaType(&mt);
 
 	// 4-3. フィルタグラフへ追加
-	pGraph->AddFilter(pF, L"Grabber");
-	for(int i=0; i<100&& !mySrc.pin.enumMedia.mts.size(); ++i){
-		Sleep(10);
-	}
+	pGraph->AddFilter(pSGF, L"Grabber");
+
+	//	以下、たぶん不要 0516 hase
+	//	mySrc.pin.WaitForMediaType();
+
 	// 4-4. サンプルグラバの接続
-	// [pSrc](o) -> (i)[pF](o) -> [VideoRender]
+	// [pSrc](o) -> (i)[pSGrab](o) -> [VideoRender]
 	//       ↑A     ↑B       ↑C
-	IPin *pSrcOut = GetPin(pSrc, PINDIR_OUTPUT);	// A
-	IPin *pSGrabIN = GetPin(pF, PINDIR_INPUT);		// B
-	IPin *pSGrabOut = GetPin(pF, PINDIR_OUTPUT);	// C
-	HRESULT hr = pGraph->Connect(pSrcOut, pSGrabIN);
+	if (!pSrcOut) pSrcOut = GetPin(pSrc, PINDIR_OUTPUT);		// A
+	if (!pSGrabIn) pSGrabIn = GetPin(pSGF, PINDIR_INPUT);		// B
+	if (!pSGrabOut) pSGrabOut = GetPin(pSGF, PINDIR_OUTPUT);		// C
+	HRESULT hr = pGraph->Connect(pSrcOut, pSGrabIn);
 	if (hr){
 		TCHAR buf[1024];
 		AMGetErrorText(hr, buf, sizeof(buf));
 		DSTR << "DShowRecv Connect() Failed:" << buf << std::endl;
+		return false;
+	}else{
+	//	pGraph->Render(pSGrabOut);
+
+		// 4-5. グラバのモードを適切に設定
+		pSGrab->SetBufferSamples(FALSE);
+		pSGrab->SetOneShot(FALSE);
+		pSGrab->SetCallback(&callBack, 0);  // 第2引数でコールバックを指定 (0:SampleCB, 1:BufferCB)
+
+		// 5. キャプチャ開始
+		pGraph->QueryInterface(IID_IMediaControl, (void **)&pMediaControl);
+		hr = pMediaControl->Run();
+		if (hr != S_OK){
+			TCHAR buf[1024];
+			AMGetErrorText(hr, buf, sizeof(buf));
+			DSTR << "DShowRecv Run() Failed:" << buf << std::endl;
+		}
+		bGood = true;
+		return true;
 	}
-//	pGraph->Render(pSGrabOut);
-
-	// 4-5. グラバのモードを適切に設定
-	pSGrab->SetBufferSamples(FALSE);
-	pSGrab->SetOneShot(FALSE);
-	pSGrab->SetCallback(&callBack, 0);  // 第2引数でコールバックを指定 (0:SampleCB, 1:BufferCB)
-
-	// 5. キャプチャ開始
-	pGraph->QueryInterface(IID_IMediaControl, (void **)&pMediaControl);
-	hr = pMediaControl->Run();
-	if (hr != S_OK){
-		TCHAR buf[1024];
-		AMGetErrorText(hr, buf, sizeof(buf));
-		DSTR << "DShowRecv Run() Failed:" << buf << std::endl;
-	}
-
-	return true;
 }
 void DShowRecv::Release(){
 	mySrc.StopThread();
@@ -250,8 +262,4 @@ void DShowRecv::Release(){
 	pMediaControl = NULL;
 	pGraph = NULL;
 	CoUninitialize();
-}
-
-void DShowRecv::Set(){
-//	while(mySrc.Recv());
 }

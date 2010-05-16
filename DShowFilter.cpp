@@ -88,10 +88,16 @@ STDMETHODIMP CMyEnumMedia::Next(ULONG c, AM_MEDIA_TYPE** pp, ULONG* pc){
 //	CMyPin
 //
 bool CMyPin::WaitForMediaType(){
-	for(int i=0; i<100; ++i){
-		if (enumMedia.mts.size()) return true;
-		Sleep(100);
+	for(int i=0; i<10; ++i){
+		if (enumMedia.mts.size()){
+			if (i) std::cout << std::endl;
+			return true;
+		}
+		if (i==0) std::cout << "CMyPin::WaitForMediaType() waiting ";
+		else std::cout << ".";
+		Sleep(10);
 	}
+	std::cout << " failed." << std::endl;
 	return false;
 }
 
@@ -119,7 +125,6 @@ STDMETHODIMP CMyPin::QueryInterface(REFIID riid, void ** ppv){
 	return E_NOINTERFACE;
 }
 STDMETHODIMP CMyPin::EnumMediaTypes(IEnumMediaTypes **ppEnum){
-	WaitForMediaType();
 	*ppEnum = &enumMedia;
 	return S_OK;
 }
@@ -136,17 +141,21 @@ STDMETHODIMP CMyPin::Connect(struct IPin *pin, struct _AMMediaType const * mt){
 	}
 	if (!mt){
 		WaitForMediaType();
-		mt = &enumMedia.mts[0];
+		if (enumMedia.mts.size()) mt = &enumMedia.mts[0];
 	}
-	HRESULT hr = to->ReceiveConnection(this, mt);
-	if (hr == S_OK){
-		isConnected = true;
-	}else{
-		TCHAR buf[1024];
-		AMGetErrorText(hr, buf, sizeof(buf));
-		DSTR << "CMyPin::Connect() Failed:" << buf << std::endl;
+	if (mt){
+		HRESULT hr = to->ReceiveConnection(this, mt);
+		if (hr == S_OK){
+			isConnected = true;
+		}else{
+			TCHAR buf[1024];
+			AMGetErrorText(hr, buf, sizeof(buf));
+			DSTR << "CMyPin::Connect() Failed:" << buf << std::endl;
+		}
+		return hr;
 	}
-	return hr;
+	DSTR << "CMyPin::Connect() No Media Type."  << std::endl;
+	return E_NOTDETERMINED;
 }
 STDMETHODIMP CMyPin::QueryPinInfo(PIN_INFO *pInfo){
 	if (pInfo){
@@ -421,7 +430,7 @@ bool DShowCap::Init(char* cameraName){
 	pSGrab->SetOneShot(FALSE);
 	pSGrab->SetCallback(&callBack, 0);  // 第2引数でコールバックを指定 (0:SampleCB, 1:BufferCB)
 
-	Sleep(1000);
+//	Sleep(1000);
 	// 5. キャプチャ開始
 	pGraph->QueryInterface(IID_IMediaControl, (void **)&pMediaControl);
 	pMediaControl->Run();

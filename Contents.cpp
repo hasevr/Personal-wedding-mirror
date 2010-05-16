@@ -264,11 +264,11 @@ void Contents::Init(){
 
 		if (i==0) pose.Ori() = Quaterniond::Rot(Rad(180), 'y');
 		else pose.Ori() = Quaterniond::Rot(Rad(-180), 'y');
-		pose.Pos() = backDir * 2*scale;
+		pose.Pos() = backDir * 1*scale;
 		paths.back().push_back(Key(0, 12/speed, pose));
-		pose.Pos() = backDir * 5*scale;
+		pose.Pos() = backDir * 2.5*scale;
 		paths.back().push_back(Key(0, 12/speed, pose));
-		pose.Pos() = backDir * 8*scale;
+		pose.Pos() = backDir * 4*scale;
 		paths.back().push_back(Key(1, 0, pose, 0));
 	}
 

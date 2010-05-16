@@ -9,6 +9,14 @@
 
 
 STDMETHODIMP CMySGCBSend::SampleCB( double SampleTime, IMediaSample * pSample ){
+/*	//	間引き
+	static int ct;
+	if (ct <2){
+		ct++;
+		return S_OK;
+	}
+	ct = 0;
+*/
 	//	MediaTypeとデータサイズの送信
 	BYTE* data=NULL;
 	pSample->GetPointer(&data);
@@ -38,7 +46,7 @@ STDMETHODIMP CMySGCBSend::SampleCB( double SampleTime, IMediaSample * pSample ){
 				if (rv != SOCKET_ERROR)	break;
 				std::cout << "Retry packet " << i << " " << t << std::endl;
 			}
-			if (i%3==0) Sleep(2);
+//			if (i%3==0) Sleep(5);
 		}
 		packet.count = i;
 		memcpy(packet.data, data+i*1024, mediaType.length%1024);
@@ -179,7 +187,7 @@ bool DShowSender::Init(char* cameraName){
 #if 1	//	圧縮の設定
 	IAMVideoCompression* pVc=NULL;
 	pCompOut->QueryInterface(IID_IAMVideoCompression, (void**)&pVc);
-	hr = pVc->put_Quality(0.2);
+	hr = pVc->put_Quality(0.4);
 	pVc->Release();
 #endif
 
@@ -240,7 +248,7 @@ bool DShowSender::Init(char* cameraName){
 		AMGetErrorText(hr, buf, sizeof(buf));
 		DSTR << "CMyPin::Connect()" << hr << " : " << buf << std::endl;
 	}
-//	pGraph->Render(pSGrabOut);
+	pGraph->Render(pSGrabOut);
 
 	// 4-5. グラバのモードを適切に設定
 	pSGrab->SetBufferSamples(FALSE);
@@ -261,7 +269,8 @@ bool DShowSender::Init(char* cameraName){
 
 
 int main(){
-	dshowSender.Init("Logicool Qcam Pro 9000");
+//	dshowSender.Init("Logicool Qcam Pro 9000");
+	dshowSender.Init("SANYO Digital Camera");
 	while(1){
 		char ch = _getch();
 		if (ch == 0x1b || ch=='q') break;

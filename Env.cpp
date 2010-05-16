@@ -1,6 +1,7 @@
 #include "Env.h"
 #include "Contents.h"
 
+
 Env env;
 
 void Env::InitMirror(){
@@ -268,7 +269,7 @@ void Env::Init(){
 	InitSupport();
 	PlaceMirror();
 	PlaceSupport();
-//	WritePs();
+	WritePs();
 	InitGL();
 }
 

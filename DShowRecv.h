@@ -5,6 +5,7 @@
 class CMySrcRecv:public CMySrc{
 public:
 	volatile bool bStopThread;
+	HANDLE hThread;
 	PMediaData pdata;
 	PMediaTypeAndLen ptype;
 	WBSocket sockRecv;
@@ -36,11 +37,19 @@ public:
 };
 
 struct DShowRecv: public DShowCap{
+	bool bGood;
+	bool IsGood(){ return bGood; }
 	CMySrcRecv mySrc;
 	CMySGCBRecv callBack;
-	bool Init(char* cameraName);
+	IBaseFilter *pSGF;
+	ISampleGrabber *pSGrab;
+	IPin* pSrcOut;
+	IPin* pSGrabIn;
+	IPin* pSGrabOut;
+	DShowRecv();
+	bool Init();
+	bool Init(char*){ assert(0); }
 	void Release();
-	void Set();
 };
 
 extern DShowRecv dshowRecv;

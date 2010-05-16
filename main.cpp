@@ -183,20 +183,23 @@ void keyboard(unsigned char key, int x, int y){
 
 
 void display(){
-	dshowRecv.Set();
-
 	contents.Draw(false);
 	env.Draw();
 	glutSwapBuffers();
 }
 
 void idle(){
+	static int count;
 	static double next;
 	double time = timeGetTime() / 1000.0;
 	if (!next) next = time + env.dt;
 	while (next < time){
 		env.Step();
+		count ++;
 		next += env.dt;
+	}
+	if (!dshowRecv.IsGood() && count%10==0){
+		dshowRecv.Init();
 	}
 }
 
@@ -222,9 +225,7 @@ void setLight() {
 
 
 int main(int argc, char* argv[]){
-	//	"IP Camera [JPEG/MJPEG]", "Logicool Qcam Pro 9000"
-//	dshowRecv.Init("IP Camera [JPEG/MJPEG]");
-	dshowRecv.Init("Logicool Qcam Pro 9000");
+	dshowRecv.Init();
 
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
