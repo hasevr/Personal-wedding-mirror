@@ -12,12 +12,9 @@ public:
 };
 
 struct DShowSender: public DShowCap{
-	IBaseFilter* pMic;
-	IGraphBuilder* pAudioGraph;
-	IMediaControl* pAudioMediaControl;
 	CMySGCBSend callBack;
 	DShowSender();
-	bool Init(char* cameraName, char* micName);
+	bool Init(char* cameraName);
 };
 
 extern DShowSender dshowSender;
