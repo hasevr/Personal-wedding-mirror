@@ -148,14 +148,15 @@ struct DShowCap{
 	DWORD rotId;
 	CMySampleGrabberCB callBack;
 	DShowCap();
-	IBaseFilter* FindSrc(char* cameraName);
 	void Prop();
 	bool Init(char* cameraName);
 	void Release();
 	void Set();
 };
 ///	フィルタから指定の方向のピンを取り出す
-IPin *GetPin(IBaseFilter *pFilter, PIN_DIRECTION PinDir);
+IPin *GetPin(IBaseFilter *pFilter, PIN_DIRECTION PinDir, int n=0);
+///	キャプチャフィルタを見つける
+IBaseFilter* FindSrc(char* cameraName, bool bVideo=true);
 
 ///	GraphEditで見るために、フィルタグラフをランタイムオブジェクトに登録する。
 ///	pdwRegister は 登録時のID

@@ -295,38 +295,16 @@ STDMETHODIMP CMySampleGrabberCB::BufferCB( double dblSampleTime, BYTE * pBuffer,
 //--------------------------------------------------------------------------------
 //	DShowCap
 //
+IBaseFilter* FindSrc(char* keyName, bool bVideo){
+	IBaseFilter* pSrc = NULL;
 
-IPin *GetPin(IBaseFilter *pFilter, PIN_DIRECTION PinDir){
-	BOOL			 bFound = FALSE;
-	IEnumPins	*pEnum;
-	IPin			 *pPin;
-
-	pFilter->EnumPins(&pEnum);
-	while(pEnum->Next(1, &pPin, 0) == S_OK)
-		{
-			PIN_DIRECTION PinDirThis;
-			pPin->QueryDirection(&PinDirThis);
-			if (bFound = (PinDir == PinDirThis)) // 引数で指定した方向のピンならbreak
-				break;
-			pPin->Release();
-		}
-	pEnum->Release();
-	return (bFound ? pPin : 0);
-}
-
-DShowCap::DShowCap(){
-	pSrc = NULL;
-	pMediaControl = NULL;
-	pGraph = NULL;
-	rotId = 0;
-}
-IBaseFilter* DShowCap::FindSrc(char* cameraName){
 	// 2. システムデバイス列挙子を作成
 	ICreateDevEnum *pDevEnum = NULL;
 	CoCreateInstance(CLSID_SystemDeviceEnum, NULL, CLSCTX_INPROC, IID_ICreateDevEnum, (void **)&pDevEnum);
 
 	IEnumMoniker *pClassEnum = NULL;
-	pDevEnum->CreateClassEnumerator(CLSID_VideoInputDeviceCategory, &pClassEnum, 0);
+	if (bVideo) pDevEnum->CreateClassEnumerator(CLSID_VideoInputDeviceCategory, &pClassEnum, 0);
+	else pDevEnum->CreateClassEnumerator(CLSID_AudioInputDeviceCategory, &pClassEnum, 0);
 
 	const int N_ENUM=100;
 	IMoniker *pMonikers[N_ENUM];
@@ -349,7 +327,7 @@ IBaseFilter* DShowCap::FindSrc(char* cameraName){
 		pPropBag->Release();
 		std::cout << "Enum Filter:" << filterName << std::endl;
 		//	名前を確認してバインド
-		if (!pSrc && (cameraName==NULL || strcmp(filterName, cameraName) == 0)){
+		if (!pSrc && (keyName==NULL || strstr(filterName, keyName))){
 			// モニカをフィルタオブジェクトにバインドする
 			pMonikers[i]->BindToObject(0, 0, IID_IBaseFilter, (void **)&pSrc);
 		}
@@ -358,6 +336,37 @@ IBaseFilter* DShowCap::FindSrc(char* cameraName){
 	pClassEnum->Release();
 	pDevEnum->Release();
 	return pSrc;
+}
+
+IPin *GetPin(IBaseFilter *pFilter, PIN_DIRECTION PinDir, int n){
+	BOOL			 bFound = FALSE;
+	IEnumPins	*pEnum;
+	IPin			 *pPin;
+	int count = 0;
+
+	pFilter->EnumPins(&pEnum);
+	while(pEnum->Next(1, &pPin, 0) == S_OK)
+		{
+			PIN_DIRECTION PinDirThis;
+			pPin->QueryDirection(&PinDirThis);
+			if (PinDir == PinDirThis){ // 引数で指定した方向のピンならbreak
+				if (n==count){
+					bFound = true;
+					break;
+				}
+				count ++;
+			}
+			pPin->Release();
+		}
+	pEnum->Release();
+	return (bFound ? pPin : 0);
+}
+
+DShowCap::DShowCap(){
+	pSrc = NULL;
+	pMediaControl = NULL;
+	pGraph = NULL;
+	rotId = 0;
 }
 void DShowCap::Prop(){
 	if (!pSrc) return;

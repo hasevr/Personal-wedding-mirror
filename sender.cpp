@@ -6,6 +6,8 @@
 #include <assert.h>
 #include "WBGuid.h"
 
+#include <time.h>
+
 
 
 STDMETHODIMP CMySGCBSend::SampleCB( double SampleTime, IMediaSample * pSample ){
@@ -113,22 +115,31 @@ void CMySGCBSend::InitSock(){
 
 
 DShowSender dshowSender;
-bool DShowSender::Init(char* cameraName){
+DShowSender::DShowSender():pMic(NULL), pAudioGraph(NULL), pAudioMediaControl(NULL){
+}
+
+bool DShowSender::Init(char* cameraName, char* micName){
 	HRESULT hr=S_OK;
 	callBack.InitSock();
 	CoInitialize(NULL);
 
 	// 1. フィルタグラフ作成
 	CoCreateInstance(CLSID_FilterGraph, NULL, CLSCTX_INPROC, IID_IGraphBuilder, (void **)&pGraph);
-	AddToRot(pGraph, &rotId);
+
+	CoCreateInstance(CLSID_FilterGraph, NULL, CLSCTX_INPROC, IID_IGraphBuilder, (void **)&pAudioGraph);
+	AddToRot(pAudioGraph, &rotId);
 	HFILE h = (HFILE)CreateFile("Filter.log", GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, 0, NULL);
-	pGraph->SetLogFile(h);
+	pAudioGraph->SetLogFile(h);
+
 
 	// 2. ソースフィルタ（カメラ）の取得
 #if 1
 	pSrc = FindSrc(cameraName);
 	if (!pSrc) return false;
 	pGraph->AddFilter(pSrc, L"Video Capture");
+	pMic = FindSrc(micName, false);
+	if (!pMic) return false;
+	pAudioGraph->AddFilter(pMic, L"Audio Capture");
 #else
 	pGraph->RenderFile(L"bothhand.mpg", NULL);
 	IBaseFilter* pRender=NULL;
@@ -154,7 +165,7 @@ bool DShowSender::Init(char* cameraName){
 	}
 	if (!pSrc) return false;
 #endif
-
+		
 	// 4. コールバックの設定
 	// 4-1. サンプルグラバの生成
 	IBaseFilter *pF = NULL;
@@ -174,15 +185,70 @@ bool DShowSender::Init(char* cameraName){
 	pGraph->AddFilter(pComp, L"MJPG Compressor");
 #endif
 
+	//	Teeの作成
+	IBaseFilter *pTee=NULL;
+	CoCreateInstance(CLSID_SmartTee, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (LPVOID *)&pTee);
+	hr = pGraph->AddFilter(pTee, L"Tee");
+	//	AVIMuxの作成
+	IBaseFilter *pVDest=NULL;
+	CoCreateInstance(CLSID_AviDest, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (LPVOID *)&pVDest);
+	hr = pGraph->AddFilter(pVDest, L"VideoDest");
+	//	Audio Recoderの作成
+	IBaseFilter *pADest=NULL;
+	CoCreateInstance(WBGuid("E882F102-F626-49E9-BD68-CE2BE7E59EA0"),  NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (LPVOID *)&pADest);
+	hr = pAudioGraph->AddFilter(pADest, L"AudioDest");
+
+	//	ファイルライターの生成
+	IBaseFilter *pAFile=NULL;
+	CoCreateInstance(CLSID_FileWriter, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (LPVOID *)&pAFile);
+	hr = pAudioGraph->AddFilter(pAFile, L"AudioFile");
+	IBaseFilter *pVFile=NULL;
+	CoCreateInstance(CLSID_FileWriter, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (LPVOID *)&pVFile);
+	hr = pGraph->AddFilter(pVFile, L"VideoFile");
+
+	IFileSinkFilter* pVFileSink= NULL;
+	hr = pVFile->QueryInterface(IID_IFileSinkFilter, (void**)&pVFileSink);
+	IFileSinkFilter* pAFileSink= NULL;
+	hr = pAFile->QueryInterface(IID_IFileSinkFilter, (void**)&pAFileSink);
+
+	WCHAR buf[1024];	
+	time_t t = time(NULL);
+    struct tm* tmp = localtime(&t);	
+	wcsftime(buf, sizeof(buf)/sizeof(buf[0]), L"SenderRec_%Y_%m_%d.%H.%M.%S.wav", tmp);
+	pAFileSink->SetFileName(buf, NULL);
+	wcsftime(buf, sizeof(buf)/sizeof(buf[0]), L"SenderRec_%Y_%m_%d.%H.%M.%S.avi", tmp);
+	pVFileSink->SetFileName(buf, NULL);
+
+
+	//	レンダラーの作成
+	IBaseFilter* pVRender;
+	CoCreateInstance(CLSID_VideoRenderer, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (LPVOID *)&pVRender);
+	hr = pGraph->AddFilter(pVRender, L"VideoRender");
+
+
+
 	// 4-4. サンプルグラバの接続 src->comp->grab
 	// ピンの取得
-	IPin *pSrcOut = GetPin(pSrc, PINDIR_OUTPUT);
-	IPin *pSGrabIN = GetPin(pF, PINDIR_INPUT);	
-	IPin *pSGrabOut = GetPin(pF, PINDIR_OUTPUT);
+	IPin* pSrcOut = GetPin(pSrc, PINDIR_OUTPUT);
+	IPin* pSGrabIn = GetPin(pF, PINDIR_INPUT);	
+	IPin* pSGrabOut = GetPin(pF, PINDIR_OUTPUT);
 	
-	IPin *pCompIn = GetPin(pComp, PINDIR_INPUT);
-	IPin *pCompOut = GetPin(pComp, PINDIR_OUTPUT); 
+	IPin* pCompIn = GetPin(pComp, PINDIR_INPUT);
+	IPin* pCompOut = GetPin(pComp, PINDIR_OUTPUT); 
 
+	IPin* pTeeIn = GetPin(pTee, PINDIR_INPUT); 
+	IPin* pTeeOut1 = GetPin(pTee, PINDIR_OUTPUT, 0); 
+	IPin* pTeeOut2 = GetPin(pTee, PINDIR_OUTPUT, 1); 
+	IPin* pVDestIn = GetPin(pVDest, PINDIR_INPUT);
+	IPin* pVDestOut = GetPin(pVDest, PINDIR_OUTPUT);
+	IPin* pVFileIn = GetPin(pVFile, PINDIR_INPUT);
+
+	IPin* pMicOut = GetPin(pMic, PINDIR_OUTPUT);
+	IPin* pADestIn = GetPin(pADest, PINDIR_INPUT);
+	IPin* pADestOut = GetPin(pADest, PINDIR_OUTPUT);
+	IPin* pAFileIn = GetPin(pAFile, PINDIR_INPUT);
+
+	IPin* pVRenderIn = GetPin(pVRender, PINDIR_INPUT);
 
 #if 1	//	圧縮の設定
 	IAMVideoCompression* pVc=NULL;
@@ -242,13 +308,20 @@ bool DShowSender::Init(char* cameraName){
 		}
 		*/
 	}
-	hr = pGraph->Connect(pCompOut, pSGrabIN);
+	hr = pGraph->Connect(pCompOut, pSGrabIn);
 	if (!hr==S_OK){
 		TCHAR buf[1024];
 		AMGetErrorText(hr, buf, sizeof(buf));
 		DSTR << "CMyPin::Connect()" << hr << " : " << buf << std::endl;
 	}
-	pGraph->Render(pSGrabOut);
+	hr = pGraph->Connect(pSGrabOut, pTeeIn);
+	hr = pGraph->Connect(pTeeOut1, pVDestIn);
+	hr = pGraph->Connect(pVDestOut, pVFileIn);
+	hr = pGraph->Connect(pTeeOut2, pVRenderIn);
+
+	hr = pAudioGraph->Connect(pMicOut, pADestIn);
+	hr = pAudioGraph->Connect(pADestOut, pAFileIn);
+
 
 	// 4-5. グラバのモードを適切に設定
 	pSGrab->SetBufferSamples(FALSE);
@@ -263,13 +336,17 @@ bool DShowSender::Init(char* cameraName){
 
 	// 5. キャプチャ開始
 	pGraph->QueryInterface(IID_IMediaControl, (void **)&pMediaControl);
+	pAudioGraph->QueryInterface(IID_IMediaControl, (void **)&pAudioMediaControl);
+	pAudioMediaControl->Pause();
+	pAudioMediaControl->Run();
 	pMediaControl->Run();
+
 	return true;
 }
 
 
 int main(){
-	dshowSender.Init("Logicool Qcam Pro 9000");
+	dshowSender.Init("Logicool", "Logicool Mic");
 	while(1){
 		char ch = _getch();
 		if (ch == 0x1b || ch=='q') break;
