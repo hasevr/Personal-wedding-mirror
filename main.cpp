@@ -225,8 +225,6 @@ void setLight() {
 
 
 int main(int argc, char* argv[]){
-	dshowRecv.Init();
-
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
 	glutCreateWindow("mirror");

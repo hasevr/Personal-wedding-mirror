@@ -58,7 +58,7 @@ bool CMySrcRecv::Recv(){
 			pSample->GetPointer(&ptr);
 			if (ptr){
 				PMediaData* pData = (PMediaData*)buf;
-				memcpy(ptr + pData->count*1024, pData->data, 1024);
+				memcpy(ptr + pData->count*PMediaData::DATALEN, pData->data, PMediaData::DATALEN);
 				flags[pData->count] = true;
 			}
 		}
@@ -79,14 +79,14 @@ bool CMySrcRecv::Recv(){
 
 		//	1回前のバッファを送信
 		bool bOK= true;
-		for(int i=0; i<(ptype.length+1023)/1024 ; ++i){
+		for(int i=0; i<(ptype.length+PMediaData::DATALEN-1)/PMediaData::DATALEN ; ++i){
 			if (!flags[i]){
 				std::cout << i << " ";
 				bOK = false;
 			}
 			flags[i] = false;
 		}
-		std::cout << "/" << (ptype.length+1023)/1024 << std::endl;
+		std::cout << "/" << (ptype.length+PMediaData::DATALEN-1)/PMediaData::DATALEN << std::endl;
 		FILTER_STATE state=State_Stopped;
 		GetState(100, &state);
 		if (bOK && ptype.length && pin.isConnected && state == State_Running && pSample){
@@ -195,7 +195,7 @@ bool DShowRecv::Init(){
 	if (!pSrc){
 		//	単体動作時
 		//	"IP Camera [JPEG/MJPEG]", "Logicool Qcam Pro 9000"
-		pSrc = FindSrc("Logicool Qcam Pro 9000");
+	//	pSrc = FindSrc("Logicool Qcam Pro 9000");
 		//	カメラがなければ、ネット動作する
 		if (!pSrc){
 			pSrc = &mySrc;
@@ -207,19 +207,18 @@ bool DShowRecv::Init(){
 
 	// 4. コールバックの設定
 	// 4-1. サンプルグラバの生成
-	CoCreateInstance(CLSID_SampleGrabber, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (LPVOID *)&pSGF);
-	pSGF->QueryInterface(IID_ISampleGrabber, (void **)&pSGrab);
-	AM_MEDIA_TYPE mt;
-	ZeroMemory(&mt, sizeof(mt));
-	mt.majortype = MEDIATYPE_Video;
-	mt.subtype = MEDIASUBTYPE_RGB24;
-	pSGrab->SetMediaType(&mt);
+	if (!pSGrab){
+		CoCreateInstance(CLSID_SampleGrabber, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (LPVOID *)&pSGF);
+		pSGF->QueryInterface(IID_ISampleGrabber, (void **)&pSGrab);
+		AM_MEDIA_TYPE mt;
+		ZeroMemory(&mt, sizeof(mt));
+		mt.majortype = MEDIATYPE_Video;
+		mt.subtype = MEDIASUBTYPE_RGB24;
+		pSGrab->SetMediaType(&mt);
 
-	// 4-3. フィルタグラフへ追加
-	pGraph->AddFilter(pSGF, L"Grabber");
-
-	//	以下、たぶん不要 0516 hase
-	//	mySrc.pin.WaitForMediaType();
+		// 4-3. フィルタグラフへ追加
+		pGraph->AddFilter(pSGF, L"Grabber");
+	}
 
 	// 4-4. サンプルグラバの接続
 	// [pSrc](o) -> (i)[pSGrab](o) -> [VideoRender]

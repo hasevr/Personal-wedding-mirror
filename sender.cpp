@@ -36,13 +36,13 @@ STDMETHODIMP CMySGCBSend::SampleCB( double SampleTime, IMediaSample * pSample ){
 		std::cout << "Len:" << mediaType.length << " Sz:" << mediaType.bufferSize << "  30frame / " << dt << " msec" << std::endl;
 	}
 	
-	int nP = (mediaType.length+1023)/1024;
+	int nP = (mediaType.length+PMediaData::DATALEN-1)/PMediaData::DATALEN;
 	static PMediaData packet;
 	if (data){
 		int i;
 		for(i=0; i<nP-1; ++i){
 			packet.count = i;
-			memcpy(packet.data, data+i*1024, 1024);
+			memcpy(packet.data, data+i*PMediaData::DATALEN, PMediaData::DATALEN);
 			for(int t=0; t<10; ++t){
 				int rv = send(sockSend, (char*)&packet, sizeof(packet), MSG_DONTROUTE);
 				if (rv != SOCKET_ERROR)	break;
@@ -51,7 +51,7 @@ STDMETHODIMP CMySGCBSend::SampleCB( double SampleTime, IMediaSample * pSample ){
 //			if (i%3==0) Sleep(5);
 		}
 		packet.count = i;
-		memcpy(packet.data, data+i*1024, mediaType.length%1024);
+		memcpy(packet.data, data+i*PMediaData::DATALEN, mediaType.length%PMediaData::DATALEN);
 		send(sockSend, (char*)&packet, sizeof(packet), MSG_DONTROUTE);
 	}
 	return S_OK;
@@ -182,7 +182,8 @@ bool DShowSender::Init(char* cameraName){
 
 	//	Teeの作成
 	IBaseFilter *pTee=NULL;
-	CoCreateInstance(CLSID_SmartTee, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (LPVOID *)&pTee);
+//	CoCreateInstance(CLSID_SmartTee, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (LPVOID *)&pTee);
+	CoCreateInstance(CLSID_InfTee, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (LPVOID *)&pTee);
 	hr = pGraph->AddFilter(pTee, L"Tee");
 	//	AVIMuxの作成
 	IBaseFilter *pVDest=NULL;
@@ -220,13 +221,6 @@ bool DShowSender::Init(char* cameraName){
 	IPin* pCompIn = GetPin(pComp, PINDIR_INPUT);
 	IPin* pCompOut = GetPin(pComp, PINDIR_OUTPUT); 
 
-	IPin* pTeeIn = GetPin(pTee, PINDIR_INPUT); 
-	IPin* pTeeOut1 = GetPin(pTee, PINDIR_OUTPUT, 0); 
-	IPin* pTeeOut2 = GetPin(pTee, PINDIR_OUTPUT, 1); 
-	IPin* pVDestIn = GetPin(pVDest, PINDIR_INPUT);
-	IPin* pVDestOut = GetPin(pVDest, PINDIR_OUTPUT);
-	IPin* pVFileIn = GetPin(pVFile, PINDIR_INPUT);
-	IPin* pVRenderIn = GetPin(pVRender, PINDIR_INPUT);
 
 #if 1	//	圧縮の設定
 	IAMVideoCompression* pVc=NULL;
@@ -292,9 +286,17 @@ bool DShowSender::Init(char* cameraName){
 		AMGetErrorText(hr, buf, sizeof(buf));
 		DSTR << "CMyPin::Connect()" << hr << " : " << buf << std::endl;
 	}
+	IPin* pTeeIn = GetPin(pTee, PINDIR_INPUT); 
+	IPin* pTeeOut1 = GetPin(pTee, PINDIR_OUTPUT, 0); 
+	IPin* pVDestIn = GetPin(pVDest, PINDIR_INPUT);
+	IPin* pVDestOut = GetPin(pVDest, PINDIR_OUTPUT);
+	IPin* pVFileIn = GetPin(pVFile, PINDIR_INPUT);
 	hr = pGraph->Connect(pSGrabOut, pTeeIn);
 	hr = pGraph->Connect(pTeeOut1, pVDestIn);
 	hr = pGraph->Connect(pVDestOut, pVFileIn);
+
+	IPin* pTeeOut2 = GetPin(pTee, PINDIR_OUTPUT, 1); 
+	IPin* pVRenderIn = GetPin(pVRender, PINDIR_INPUT);
 	hr = pGraph->Connect(pTeeOut2, pVRenderIn);
 
 	// 4-5. グラバのモードを適切に設定
