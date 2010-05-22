@@ -157,7 +157,9 @@ void Cell::CalcPosition(double depth, int id){	//	’¸“_id ‚ªdepth‚É‚È‚é‚æ‚¤‚É‚·‚é
 	}
 	outPosCenter = mirror.center + oc;
 
+
 	for(int i=0; i<4; ++i){
+#if 0
 		Vec3d oc = outDir[i];
 		double ceilDist = config.ceil - mirror.vertex[i].y;
 		oc *= ceilDist / oc.y;
@@ -166,6 +168,21 @@ void Cell::CalcPosition(double depth, int id){	//	’¸“_id ‚ªdepth‚É‚È‚é‚æ‚¤‚É‚·‚é
 		if (outPlace == 1) oc *= wallRight/oc.x;
 		else if (outPlace == -1) oc *= wallLeft/oc.x;
 		outPos[i] = mirror.vertex[i] + oc;
+#else
+		Vec3d wallDir = Vec3d(0,-1,0);
+		Vec3d wallPoint = Vec3d(0, config.ceil-0.4, 0);
+		if (outPlace == 1){
+			wallDir = Vec3d(-1.5, -1, 0);
+			wallPoint = Vec3d(config.wall-1, config.ceil, 0);
+		}else if (outPlace == -1){
+			wallDir = Vec3d(1.5, -1, 0);
+			wallPoint = Vec3d(-config.wall+1, config.ceil, 0);
+		}
+		wallDir.unitize();		
+		double dist = (wallPoint - mirror.vertex[i]) * wallDir;
+		Vec3d oc = outDir[i] * dist / (outDir[i] * wallDir);
+		outPos[i] = mirror.vertex[i] + oc;
+#endif
 	}
 
 	//	imagePos
