@@ -1,13 +1,17 @@
 #include "WBSocket.h"
 #include "DShowFilter.h"
 #include "Packet.h"
+#include <deque>
 
 class CMySrcRecv:public CMySrc{
 public:
+	std::deque<unsigned char> keys;
+	CRITICAL_SECTION csec;
 	volatile bool bStopThread;
 	HANDLE hThread;
 	PMediaData pdata;
 	PMediaTypeAndLen ptype;
+	PKey pkey;
 	WBSocket sockRecv;
 	IMemAllocator* pAlloc;
 	IMediaSample* pSample;

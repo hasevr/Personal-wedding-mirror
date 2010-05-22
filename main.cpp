@@ -201,6 +201,13 @@ void idle(){
 	if (!dshowRecv.IsGood() && count%10==0){
 		dshowRecv.Init();
 	}
+	EnterCriticalSection(&dshowRecv.mySrc.csec);
+	while (dshowRecv.mySrc.keys.size()){
+		keyboard(dshowRecv.mySrc.keys.front(), 0, 0);
+		dshowRecv.mySrc.keys.pop_front();
+	}
+	LeaveCriticalSection(&dshowRecv.mySrc.csec);
+
 }
 
 

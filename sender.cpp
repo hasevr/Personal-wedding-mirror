@@ -325,9 +325,22 @@ bool DShowSender::Init(char* cameraName){
 int main(){
 	dshowSender.Init("Logicool");
 	while(1){
-		char ch = _getch();
-		if (ch == 0x1b || ch=='q') break;
-		dshowSender.Prop();
+		if (kbhit()){
+			unsigned char ch = _getch();
+			if (ch == 0x1b || ch=='q') break;
+			switch(ch){
+				case 'p':
+					dshowSender.Prop();
+					break;
+				default:
+					PKey key;
+					key.key = ch;
+					key.x = 0;
+					key.y = 0;
+					send(dshowSender.callBack.sockSend, (char*)&key, sizeof(key), MSG_DONTROUTE);
+					break;
+			}
+		}
 	}
 	dshowSender.Release();
 }

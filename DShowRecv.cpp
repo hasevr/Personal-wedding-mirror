@@ -10,11 +10,13 @@
 DShowRecv dshowRecv;
 
 CMySrcRecv::CMySrcRecv():pAlloc(NULL), pSample(NULL), bufferSize(0), hThread(NULL){
+	InitializeCriticalSection(&csec);
 	bStopThread = false;
 }
 CMySrcRecv::~CMySrcRecv(){
 	if(pSample) pSample->Release();
 	pSample=NULL;
+	DeleteCriticalSection(&csec);
 }
 DWORD WINAPI thread(void* p){
 	CMySrcRecv* This = (CMySrcRecv*)p;
@@ -77,7 +79,7 @@ bool CMySrcRecv::Recv(){
 			pin.enumMedia.mts.push_back(mt);
 		}
 
-		//	1回前のバッファを送信
+		//	1回前のバッファをDirectShowに流す
 		bool bOK= true;
 		for(int i=0; i<(ptype.length+PMediaData::DATALEN-1)/PMediaData::DATALEN ; ++i){
 			if (!flags[i]){
@@ -136,6 +138,11 @@ bool CMySrcRecv::Recv(){
 			}
 		}
 		return false;
+	}else if(buf[0] == pkey.packetId[0]){	//	キー操作
+		memcpy(&pkey, buf, sizeof(pkey));
+		EnterCriticalSection(&csec);
+		keys.push_back(pkey.key);
+		LeaveCriticalSection(&csec);
 	}
 	return true;
 }

@@ -22,5 +22,13 @@ struct PMediaData{
 		packetId[0] = 'd';
 	}
 };
+struct PKey{
+	char packetId[4];
+	unsigned char key;
+	int x, y;
+	PKey(){
+		packetId[0]='k';
+	}
+};
 
 #endif
