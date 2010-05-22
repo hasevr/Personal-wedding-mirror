@@ -337,19 +337,15 @@ int main(){
 		if (kbhit()){
 			unsigned char ch = _getch();
 			if (ch == 0x1b) break;
-			switch(ch){
-				case 'p':
-					dshowSender.Prop();
-					break;
-				default:
-					PKey key;
-					key.key = ch;
-					key.x = 0;
-					key.y = 0;
-					send(dshowSender.callBack.sockSend, (char*)&key, sizeof(key), MSG_DONTROUTE);
-					std::cout << "'" << ch <<  "' command was sent." << std::endl;
-					break;
-			}
+			if ('0'<=ch && ch <='9') continue;
+			
+			//	ƒL[‘€ì‚ð‘—M
+			PKey key;
+			key.key = ch;
+			key.x = 0;
+			key.y = 0;
+			send(dshowSender.callBack.sockSend, (char*)&key, sizeof(key), MSG_DONTROUTE);
+			std::cout << "'" << ch <<  "' command was sent." << std::endl;
 		}
 	}
 	dshowSender.Release();
