@@ -78,8 +78,12 @@ void CMySGCBSend::InitSock(){
 		}
 		if( nis[i].Addr().AdrIn().sin_addr.S_un.S_un_b.s_b1==192 && nis[i].Addr().AdrIn().sin_addr.S_un.S_un_b.s_b2==168 &&
 			nis[i].Addr().AdrIn().sin_addr.S_un.S_un_b.s_b3==251){
-				std::cout << " addr? ... skip." << std::endl;
-				continue;
+			std::cout << " addr? ... skip." << std::endl;
+			continue;
+		}
+		if( nis[i].Addr().AdrIn().sin_addr.S_un.S_un_b.s_b1==0){
+			std::cout << " addr? ... skip." << std::endl;
+			continue;
 		}
 		std::cout << std::endl;
 		break;
