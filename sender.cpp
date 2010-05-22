@@ -186,8 +186,8 @@ bool DShowSender::Init(char* cameraName){
 
 	//	Teeの作成
 	IBaseFilter *pTee=NULL;
-//	CoCreateInstance(CLSID_SmartTee, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (LPVOID *)&pTee);
-	CoCreateInstance(CLSID_InfTee, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (LPVOID *)&pTee);
+	CoCreateInstance(CLSID_SmartTee, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (LPVOID *)&pTee);
+//	CoCreateInstance(CLSID_InfTee, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (LPVOID *)&pTee);
 	hr = pGraph->AddFilter(pTee, L"Tee");
 	//	AVIMuxの作成
 	IBaseFilter *pVDest=NULL;
@@ -214,8 +214,6 @@ bool DShowSender::Init(char* cameraName){
 	CoCreateInstance(CLSID_VideoRenderer, NULL, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (LPVOID *)&pVRender);
 	hr = pGraph->AddFilter(pVRender, L"VideoRender");
 
-
-
 	// 4-4. サンプルグラバの接続 src->comp->grab
 	// ピンの取得
 	IPin* pSrcOut = GetPin(pSrc, PINDIR_OUTPUT);
@@ -229,7 +227,8 @@ bool DShowSender::Init(char* cameraName){
 #if 1	//	圧縮の設定
 	IAMVideoCompression* pVc=NULL;
 	pCompOut->QueryInterface(IID_IAMVideoCompression, (void**)&pVc);
-	hr = pVc->put_Quality(0.4);
+//	hr = pVc->put_Quality(0.4);
+	hr = pVc->put_Quality(0.8);
 	pVc->Release();
 #endif
 
@@ -318,6 +317,16 @@ bool DShowSender::Init(char* cameraName){
 	pGraph->QueryInterface(IID_IMediaControl, (void **)&pMediaControl);
 	pMediaControl->Run();
 
+	IVideoWindow* vw=NULL;
+	pVRender->QueryInterface(IID_IVideoWindow, (void**)&vw);
+	vw->put_Left(-3);
+	vw->put_Top(-30);
+	vw->Release();
+	HWND cwh = GetConsoleWindow();
+	vw->put_MessageDrain((OAHWND)cwh);
+	SetFocus(cwh);
+//	SetWindowPos(cwh, NULL, 642, 0, 1024-640, 600, 0);
+	SetWindowPos(cwh, NULL, 0, 480, 640, 768-480, 0);
 	return true;
 }
 
@@ -327,7 +336,7 @@ int main(){
 	while(1){
 		if (kbhit()){
 			unsigned char ch = _getch();
-			if (ch == 0x1b || ch=='q') break;
+			if (ch == 0x1b) break;
 			switch(ch){
 				case 'p':
 					dshowSender.Prop();
@@ -338,6 +347,7 @@ int main(){
 					key.x = 0;
 					key.y = 0;
 					send(dshowSender.callBack.sockSend, (char*)&key, sizeof(key), MSG_DONTROUTE);
+					std::cout << "'" << ch <<  "' command was sent." << std::endl;
 					break;
 			}
 		}
