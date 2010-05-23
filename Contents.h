@@ -36,7 +36,7 @@ struct Contents{
 	void DrawCam();
 	void DrawColor(Vec4d c);
 	void DrawShip();
-	void DrawFairy();
+	void DrawFairy(double alpha);
 
 	void DrawRandom();
 	void DrawCeil();

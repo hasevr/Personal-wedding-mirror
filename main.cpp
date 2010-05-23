@@ -150,16 +150,22 @@ void keyboard(unsigned char key, int x, int y){
 			std::cout << " done." << std::endl;
 			break;
 		case 's':
+			env.cameraMode = Env::CM_HOLE;
+			env.InitCamera();
 			contents.mode = Contents::CO_SHIP;
 			contents.ResetShip();
 			std::cout << "s Contents = start photo flow." << std::endl;
 			break;
 		case 'c':
+			env.cameraMode = Env::CM_TILE;
+			env.InitCamera();
 			contents.mode = Contents::CO_CAM;
 			contents.Draw();
 			std::cout << "c Contents=camera" << std::endl;
 			break;
 		case 'f':
+			env.cameraMode = Env::CM_HOLE;
+			env.InitCamera();
 			contents.mode = Contents::CO_FAIRY;
 			contents.Draw();
 			std::cout << "f Contents=fairy" << std::endl;

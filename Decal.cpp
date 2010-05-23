@@ -170,7 +170,7 @@ Vec3d Fairy::NewGoal(){
 	Vec3d area(6, 0.1, 18);
 	goal = pos;
 	if (abs(goal.x) < 4) goal.x *= 2;
-	if (abs(goal.y) < 16) goal.y *= 2;
+//	if (abs(goal.y) < 16) goal.y *= 2;
 	Vec3d rv = goal + 0.5*Vec3d(area.x*randd(), area.y*randd(), area.z*randd());
 	for(int i=0; i<3; ++i){
 		rv[i] = max(rv[i], offset[i]-area[i]);
@@ -251,7 +251,7 @@ void Fairy::Draw(){
 	glPushMatrix();
 	glMultMatrixf(pose);
 	glDisable(GL_DEPTH_TEST);
-	decal->Draw();
+	if (decal) decal->Draw();
 	glEnable(GL_DEPTH_TEST);
 	glPopMatrix();
 }

@@ -8,6 +8,7 @@ Contents::Contents():list(0){
 	ResetShip();
 }
 void Contents::LoadPhoto(){
+	if (decals.size() || backs.size()) return;
 //	decals.folderName = "texs";
 	decals.Load();
 	backs.folderName = "backs";
@@ -77,7 +78,10 @@ void Contents::DrawShip(){
 	glEnable(GL_LIGHTING);
 }
 
-void Contents::DrawFairy(){
+void Contents::DrawFairy(double alpha){
+	if (env.drawMode == Env::DM_FRONT) return;	//	フロントスクリーンには妖精は表示しない。
+
+	for(unsigned i=0; i<fairies.decals.size(); ++i) fairies.decals[i].color.A() = alpha;
 	glDisable(GL_LIGHTING);
 	for(unsigned i=0; i<fairies.size(); ++i){
 		fairies[i].Draw();
@@ -170,11 +174,10 @@ void Contents::DrawColor(Vec4d c){
 }
 
 void Contents::DrawCam(){
-	glColor3d(1,1,1);
+	glColor4f(1,1,1,1);
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glEnable(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, cvTex);
-	glColor4f(1,1,1,1);
 	if (env.cameraMode == Env::CM_TILE){
 		//	カメラ映像の拡大率（映像テクスチャの距離）
 //		double d = -3.5;
@@ -214,18 +217,29 @@ void Contents::Draw(bool isInit){
 	glNewList(list, GL_COMPILE);
 	glDisable(GL_LIGHTING);
 	glLineWidth(5);
+	static int fairyCount=0;
+	const double fadeLen = 20;
 	switch(mode){
 		case CO_CAM:
 			DrawCam();
 			break;
 		case CO_BLACK:
-			DrawColor(Vec4d(0,0,0,1));
+			if (fairyCount > 0){
+				fairyCount --;
+				DrawFairy(fairyCount/fadeLen);
+			}else{
+				DrawColor(Vec4d(0,0,0,1));
+			}
 			break;
 		case CO_WHITE:
 			DrawColor(Vec4d(1,1,1,1));
 			break;
 		case CO_FAIRY:
-			DrawFairy();
+			if (fairyCount < fadeLen){
+				fairyCount ++;
+				DrawFairy(fairyCount/fadeLen);
+			}
+			else DrawFairy(1);
 			break;
 		case CO_SHIP:
 			DrawShip();
@@ -252,7 +266,7 @@ void Contents::Draw(bool isInit){
 
 void Contents::Init(){
 	//	Fairyの生成
-	for(int i=0; i<100; ++i){
+	for(int i=0; i<30; ++i){
 		fairies.push_back(Fairy());
 	}
 

@@ -140,6 +140,7 @@ void Cell::CalcPosition(double depth, int id){	//	’¸“_id ‚ªdepth‚É‚È‚é‚æ‚¤‚É‚·‚é
 	}
 	mirror.center = mirrorOff / (inDirCenter * mirror.normal) * inDirCenter;
 	
+#if 0
 	Vec3d oc = outDirCenter;
 	double ceilDist = config.ceil - mirror.center.y;
 	oc *= ceilDist / oc.y;
@@ -156,7 +157,35 @@ void Cell::CalcPosition(double depth, int id){	//	’¸“_id ‚ªdepth‚É‚È‚é‚æ‚¤‚É‚·‚é
 		outPlace = 0;
 	}
 	outPosCenter = mirror.center + oc;
+#else
+	Vec3d oc = outDirCenter;
+	double ceilDist = config.ceil - mirror.center.y;
+	oc *= ceilDist / oc.y;
+	double wallLeft = -config.wall - mirror.center.x;
+	double wallRight = config.wall - mirror.center.x;
+	if (oc.x > wallRight){
+		outPlace = 1;
+	}else if (oc.x < wallLeft){
+		outPlace = -1;
+	}else{
+		outPlace = 0;
+	}
 
+	wallDir = Vec3d(0,-1,0);
+	Vec3d wallPoint = Vec3d(0, config.ceil-0.4, 0);
+	if (outPlace == 1){
+		wallDir = Vec3d(-1.5, -1, 0);
+		wallPoint = Vec3d(config.wall-1, config.ceil, 0);
+	}else if (outPlace == -1){
+		wallDir = Vec3d(1.5, -1, 0);
+		wallPoint = Vec3d(-config.wall+1, config.ceil, 0);
+	}
+	wallDir.unitize();		
+
+	double dist = (wallPoint - mirror.center) * wallDir;
+	oc = outDirCenter * dist / (outDirCenter * wallDir);
+	outPosCenter = mirror.center + oc;
+#endif
 
 	for(int i=0; i<4; ++i){
 #if 0
@@ -169,18 +198,8 @@ void Cell::CalcPosition(double depth, int id){	//	’¸“_id ‚ªdepth‚É‚È‚é‚æ‚¤‚É‚·‚é
 		else if (outPlace == -1) oc *= wallLeft/oc.x;
 		outPos[i] = mirror.vertex[i] + oc;
 #else
-		Vec3d wallDir = Vec3d(0,-1,0);
-		Vec3d wallPoint = Vec3d(0, config.ceil-0.4, 0);
-		if (outPlace == 1){
-			wallDir = Vec3d(-1.5, -1, 0);
-			wallPoint = Vec3d(config.wall-1, config.ceil, 0);
-		}else if (outPlace == -1){
-			wallDir = Vec3d(1.5, -1, 0);
-			wallPoint = Vec3d(-config.wall+1, config.ceil, 0);
-		}
-		wallDir.unitize();		
 		double dist = (wallPoint - mirror.vertex[i]) * wallDir;
-		Vec3d oc = outDir[i] * dist / (outDir[i] * wallDir);
+		oc = outDir[i] * dist / (outDir[i] * wallDir);
 		outPos[i] = mirror.vertex[i] + oc;
 #endif
 	}
@@ -242,8 +261,8 @@ void Cell::InitCamera(int fb){
 		}
 	}else if (env.cameraMode == Env::CM_TILE){
 		if (outPlace){	//	•Ç‚¾‚Á‚½‚ç
-			view[fb].Pos() = Vec3d(outPlace*(config.wall-1), outPosCenter.y, outPosCenter.z);
-			view[fb].LookAtGL(Vec3d(outPlace*config.wall, view[fb].Pos().y, view[fb].Pos().z), Vec3d(0, 1, 0));
+			view[fb].Pos() = outPosCenter - wallDir;
+			view[fb].LookAtGL(outPosCenter, Vec3d(0, 1, 0));			
 		}else{
 			if (outPosCenter.z < -6){
 				view[fb].Pos() = Vec3d(outPosCenter.x, env.config.ceil-2, outPosCenter.z);

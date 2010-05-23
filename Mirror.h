@@ -45,6 +45,7 @@ struct Cell{
 	Vec3d outPos[4];
 	Vec3d imagePos[4];
 	Vec3d inPos[4];
+	Vec3d wallDir;
 	int outPlace;	//	-1: 左の壁, 0:天井, 1:右の壁
 	Mirror mirror;
 	//	最初のレンダリング用のカメラ
