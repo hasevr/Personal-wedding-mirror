@@ -265,8 +265,9 @@ void Contents::Draw(bool isInit){
 }
 
 void Contents::Init(){
+	mode = CO_BLACK;
 	//	FairyÇÃê∂ê¨
-	for(int i=0; i<30; ++i){
+	for(int i=0; i<100; ++i){
 		fairies.push_back(Fairy());
 	}
 
