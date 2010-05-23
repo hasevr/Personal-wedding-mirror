@@ -129,23 +129,54 @@ void keyboard(unsigned char key, int x, int y){
 			std::cout << "0 Show the property sheet of the camera" << std::endl;
 			dshowRecv.Prop();
 			break;
+
 		case 't':
 			env.cameraMode = Env::CM_TILE;
 			env.InitCamera();
 			contents.Draw();
 			std::cout << "t Tile camera" << std::endl;
 			break;
-		case 'w':
-			env.cameraMode = Env::CM_WINDOW;
+		case 'h':
+			env.cameraMode = Env::CM_HOLE;
 			env.InitCamera();
 			contents.Draw();
-			std::cout << "w World camera" << std::endl;
+			std::cout << "h Hole camera" << std::endl;
+			break;
+
+
+		case 'l':
+			std::cout << "l LoadPhoto...";
+			contents.LoadPhoto();
+			std::cout << " done." << std::endl;
+			break;
+		case 's':
+			contents.mode = Contents::CO_SHIP;
+			contents.ResetShip();
+			std::cout << "s Contents = start photo flow." << std::endl;
 			break;
 		case 'c':
 			contents.mode = Contents::CO_CAM;
 			contents.Draw();
 			std::cout << "c Contents=camera" << std::endl;
 			break;
+		case 'f':
+			contents.mode = Contents::CO_FAIRY;
+			contents.Draw();
+			std::cout << "f Contents=fairy" << std::endl;
+			break;
+		case 'w':
+			contents.mode = Contents::CO_WHITE;
+			contents.Draw();
+			std::cout << "w Contents=white" << std::endl;
+			break;
+		case 'b':
+			contents.mode = Contents::CO_BLACK;
+			contents.Draw();
+			std::cout << "w Contents=black" << std::endl;
+			break;
+
+		
+		
 		case 'e':
 			contents.mode = Contents::CO_CEIL;
 			contents.Draw();
@@ -161,18 +192,8 @@ void keyboard(unsigned char key, int x, int y){
 			contents.LoadPhoto();
 			std::cout << "p Contents=photo" << std::endl;
 			break;
-		case 'l':
-			std::cout << "l LoadPhoto...";
-			contents.LoadPhoto();
-			std::cout << " done." << std::endl;
-			break;
-		case 's':
-			contents.mode = Contents::CO_SHIP;
-			contents.ResetShip();
-			std::cout << "s Contents=ship" << std::endl;
-			break;
+		
 		case 0x1b:
-		case 'q':
 			contents.Release();
 			dshowRecv.Release();
 			exit(0);
@@ -240,7 +261,8 @@ int main(int argc, char* argv[]){
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_NORMALIZE);
 	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);	glEnable(GL_TEXTURE_2D);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);	
+	glEnable(GL_TEXTURE_2D);
 	setLight();
 	glutDisplayFunc(display);
 	glutReshapeFunc(reshape);

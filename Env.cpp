@@ -262,7 +262,8 @@ void Env::Init(){
 	drawMode = DM_DESIGN;
 	front.Init();
 	config.Init();
-	projPose.Pos() = Vec3d(0, 0, -config.outY[1]+1.2);
+//	projPose.Pos() = Vec3d(0, 0, -config.outY[1]+1.2);
+	projPose.Pos() = Vec3d(0, 0, -config.outY[1]+0.2);
 	centerSeat = Vec3d(config.wall, 0, 0);
 	InitMirror();
 	InitCamera();
@@ -289,7 +290,7 @@ void Env::RenderTex(int fb){
 }
 void Env::Draw(){
 	if (contents.mode == Contents::CO_CAM) contents.UpdateCameraTex();
-	glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+	//glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	if (drawMode == DM_MIRROR) RenderTex(0);
 	if (drawMode == DM_MIRROR_BACK) RenderTex(1);
 	if (drawMode == DM_DESIGN){
@@ -297,7 +298,7 @@ void Env::Draw(){
 		RenderTex(1);
 	}
 	//	メインのレンダリングの準備
-	glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
+//	glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
 	glViewport(0, 0, windowSize.x, windowSize.y);	//	ビューポートをWindow全体に
 	glClearColor(0,0,0,1);
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
@@ -418,6 +419,7 @@ void Env::DrawMirror(int fb){
 		for(int x=0; x<DIVX	; ++x){
 			//	表示位置の虚像の表示
 			glBindTexture(GL_TEXTURE_2D, cell[y][x].texName[fb]);
+			glColor4f(1,1,1,1);
 			glBegin(GL_TRIANGLE_STRIP);
 			for(int i=0; i<4; ++i){
 				glTexCoord2dv(cell[y][x].texCoord[fb][i]);
@@ -473,7 +475,7 @@ void Env::DrawDesign(){
 }
 void Env::DrawHalfFront(int fb){
 	glDisable(GL_LIGHTING);
-	glColor3d(1,1,1);
+	glColor4f(1,1,1,1);
 	glPointSize(4);
 	glBegin(GL_POINTS);
 	glVertex3dv(cell[DIVY][0].outPosCenter);
@@ -542,6 +544,7 @@ void Env::DrawHalf(int fb){
 			//	表示位置の描画
 			glEnable(GL_TEXTURE_2D);
 			glBindTexture(GL_TEXTURE_2D, cell[y][x].texName[fb]);
+			glColor4f(1,1,1,1);
 			glBegin(GL_TRIANGLE_STRIP);
 			for(int i=0; i<4; ++i){
 				glTexCoord2dv(cell[y][x].texCoord[fb][i]);

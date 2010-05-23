@@ -39,4 +39,24 @@ struct Path: public std::vector<Key>{
 	double GetAlpha(double time);
 };
 
+struct Fairy{
+	Decal* decal;
+	int count;
+	Vec3d pos;
+	Vec3d vel;
+	Vec3d dir;
+	Vec3d goal;
+	Quaterniond ori;
+	Quaterniond oriGoal;
+	bool onCeil;
+	Fairy();
+	void Update(double dt);
+	void Draw();
+	Vec3d NewGoal();
+};
+struct Fairies:public std::vector<Fairy>{
+	Decals decals;
+	void Update(double dt);
+};
+
 #endif

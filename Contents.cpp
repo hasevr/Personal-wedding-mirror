@@ -8,10 +8,18 @@ Contents::Contents():list(0){
 	ResetShip();
 }
 void Contents::LoadPhoto(){
-	decals.folderName = "texs";
+//	decals.folderName = "texs";
 	decals.Load();
 	backs.folderName = "backs";
 	backs.Load();
+	fairies.decals.folderName = "fairies";
+	fairies.decals.Load();
+	for(int i=0; i<fairies.decals.size(); ++i){
+		fairies.decals[i].sheetSize = Vec2d(0.5, 0.5);
+	}
+	for(int i=0; i<fairies.size(); ++i){
+		fairies[i].decal = &fairies.decals[i%fairies.decals.size()];
+	}
 }
 void Contents::DrawPhoto(){
 	if (env.cameraMode == Env::CM_TILE){
@@ -24,6 +32,8 @@ void Contents::DrawPhoto(){
 }
 
 void Contents::Step(double dt){
+	fairies.Update(dt);
+	
 	if (startCount < decals.size() && decals[startCount-1].time > 4){
 		startCount++;
 	}
@@ -66,6 +76,15 @@ void Contents::DrawShip(){
 	}
 	glEnable(GL_LIGHTING);
 }
+
+void Contents::DrawFairy(){
+	glDisable(GL_LIGHTING);
+	for(unsigned i=0; i<fairies.size(); ++i){
+		fairies[i].Draw();
+	}
+	glEnable(GL_LIGHTING);
+}
+
 
 void Contents::DrawRandom(){
 	srand(0);
@@ -132,6 +151,7 @@ void Contents::DrawTile(){
 	glColor3d(1,0,0);
 	glEnable(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, cvTex);
+	glColor4f(1,1,1,1);
 	glBegin(GL_TRIANGLE_STRIP);
 	glTexCoord2dv(cvTexCoord[0]);
 	glVertex3d(-1,-1*0.75, d);
@@ -144,11 +164,17 @@ void Contents::DrawTile(){
 	glEnd();
 	glDisable(GL_TEXTURE_2D);
 }
+void Contents::DrawColor(Vec4d c){
+	glClearColor(c.R()*255, c.G()*255, c.B()*255, c.A()*255);
+	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+}
+
 void Contents::DrawCam(){
 	glColor3d(1,1,1);
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glEnable(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, cvTex);
+	glColor4f(1,1,1,1);
 	if (env.cameraMode == Env::CM_TILE){
 		//	カメラ映像の拡大率（映像テクスチャの距離）
 //		double d = -3.5;
@@ -192,6 +218,20 @@ void Contents::Draw(bool isInit){
 		case CO_CAM:
 			DrawCam();
 			break;
+		case CO_BLACK:
+			DrawColor(Vec4d(0,0,0,1));
+			break;
+		case CO_WHITE:
+			DrawColor(Vec4d(1,1,1,1));
+			break;
+		case CO_FAIRY:
+			DrawFairy();
+			break;
+		case CO_SHIP:
+			DrawShip();
+			break;
+
+		//	使わないモード
 		case CO_RANDOM:
 			DrawRandom();
 			break;
@@ -204,9 +244,6 @@ void Contents::Draw(bool isInit){
 		case CO_PHOTO:
 			DrawPhoto();
 			break;
-		case CO_SHIP:
-			DrawShip();
-			break;
 	}
 	glLineWidth(1);
 	glEnable(GL_LIGHTING);
@@ -214,6 +251,11 @@ void Contents::Draw(bool isInit){
 }
 
 void Contents::Init(){
+	//	Fairyの生成
+	for(int i=0; i<100; ++i){
+		fairies.push_back(Fairy());
+	}
+
 	//	パスの設定
 	Vec3d frontDir(0, env.front.hOff + env.front.h/2, env.front.d);
 	frontDir /= frontDir.z;

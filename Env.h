@@ -28,7 +28,7 @@ struct Env{
 	DrawMode drawMode;
 
 	enum CameraMode{
-		CM_WINDOW,
+		CM_HOLE,
 		CM_TILE
 	};
 	CameraMode cameraMode;

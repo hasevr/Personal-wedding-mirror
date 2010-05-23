@@ -230,7 +230,7 @@ void Cell::InitCamera(int fb){
 	Vec3d localOutPos[4];
 	Config& config = env.config;
 
-	if (env.cameraMode == Env::CM_WINDOW){
+	if (env.cameraMode == Env::CM_HOLE){
 		//	éãì_Çínâ∫10mÇ…
 		if(outPlace) view[fb].Pos() = env.projPose.inv() * Vec3d(outPlace*5, -5, 0);
 		view[fb].Pos() = env.projPose.inv() * Vec3d(0,-5, 0);
@@ -290,7 +290,7 @@ void Cell::InitCamera(int fb){
 		screen[fb][i] = view[fb] * localScreen[i];
 	}
 
-	if (env.cameraMode == Env::CM_WINDOW){
+	if (env.cameraMode == Env::CM_HOLE){
 		//	ç≈å„Ç≈viewÇWorldånÇ…
 		if (fb) view[fb] = Affined::Rot(Rad(180),'y') * env.projPose * view[fb];
 		else view[fb] = env.projPose * view[fb];
@@ -307,7 +307,7 @@ void Cell::InitGL(){
 		glBindTexture( GL_TEXTURE_2D, texName[i] );
 		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
 		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
-		glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL );
+		//glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL );
 		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
 		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
 		glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, texSize, texSize, 0, GL_RGBA, GL_UNSIGNED_BYTE, tmp);

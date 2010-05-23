@@ -2,15 +2,21 @@
 struct Contents{
 	enum ContentsMode{
 		CO_CAM,
+		CO_BLACK,
+		CO_WHITE,
+		CO_FAIRY,
+		CO_SHIP,
+
+		//	ˆÈ‰º”ñŽg—p
 		CO_TILE,
 		CO_CEIL,
 		CO_RANDOM,
 		CO_PHOTO,
-		CO_SHIP
 	};
 	ContentsMode mode;
 	Decals decals;
 	Decals backs;
+	Fairies fairies;
 	std::vector<Path> paths;
 	unsigned startCount;
 
@@ -26,13 +32,17 @@ struct Contents{
 	void Capture(unsigned char* buf, unsigned len);
 	void UpdateCameraTex();
 	void Init();
+
+	void DrawCam();
+	void DrawColor(Vec4d c);
+	void DrawShip();
+	void DrawFairy();
+
 	void DrawRandom();
 	void DrawCeil();
 	void DrawPhoto();
-	void DrawCam();
 	void DrawTile();
 	void LoadPhoto();
-	void DrawShip();
 	void ResetShip();
 
 	void Step(double dt);

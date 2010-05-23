@@ -88,7 +88,7 @@ STDMETHODIMP CMyEnumMedia::Next(ULONG c, AM_MEDIA_TYPE** pp, ULONG* pc){
 //	CMyPin
 //
 bool CMyPin::WaitForMediaType(){
-	for(int i=0; i<10; ++i){
+	for(int i=0; i<1; ++i){
 		if (enumMedia.mts.size()){
 			if (i) std::cout << std::endl;
 			return true;
