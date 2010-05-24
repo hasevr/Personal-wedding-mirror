@@ -42,7 +42,7 @@ void Config::Init(){
 
 void Cell::Init(int xIn, int yIn){
 	Config& config = env.config;
-	texSize = 256;
+	texSize = 768;
 	double ySum = 0;
 	double yInterval[DIVY];
 	double yPos[DIVY+1];

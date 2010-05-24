@@ -9,16 +9,16 @@ Contents::Contents():list(0){
 }
 void Contents::LoadPhoto(){
 	if (decals.size() || backs.size()) return;
-//	decals.folderName = "texs";
+	decals.folderName = "texs";
 	decals.Load();
 	backs.folderName = "backs";
 	backs.Load();
 	fairies.decals.folderName = "fairies";
 	fairies.decals.Load();
-	for(int i=0; i<fairies.decals.size(); ++i){
+	for(unsigned i=0; i<fairies.decals.size(); ++i){
 		fairies.decals[i].sheetSize = Vec2d(0.5, 0.5);
 	}
-	for(int i=0; i<fairies.size(); ++i){
+	for(unsigned i=0; i<fairies.size(); ++i){
 		fairies[i].decal = &fairies.decals[i%fairies.decals.size()];
 	}
 }
@@ -290,13 +290,13 @@ void Contents::Init(){
 		Posed pose;
 		paths.push_back(Path());
 		double scale = 63;
-		pose.Pos() = frontDir * 4*scale + Vec3d(i?10:-10, 0, 0) ;
-		paths.back().push_back(Key(0, 12/speed, pose, 0));
+//		pose.Pos() = frontDir * 4*scale + Vec3d(i?10:-10, 0, 0) ;
+//		paths.back().push_back(Key(0, 12/speed, pose, 0));
 		pose.Pos() = frontDir * 2.5*scale + Vec3d(i?5:-5, 0, 0) ;
-		paths.back().push_back(Key(0, 12/speed, pose));
+		paths.back().push_back(Key(0, 12/speed, pose, 0));
 		pose.Pos() = frontDir * 1*scale + Vec3d(i?-1:1, 0, 0) ;
 		paths.back().push_back(Key(0, 0.4/speed, pose));
-		static double yOff = 13;	//20;
+		static double yOff = 14;	//13;
 		double xOff = (i==0 ? 1 : -1)*6.2;
 		Affined af;
 		double lookDiff = -std::abs(xOff) * 10000000;	//	ŽÀ‚ÍŠ®‘S‚É…•½=–³ŒÀ”{‚Å—Ç‚¢

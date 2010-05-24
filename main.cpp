@@ -262,7 +262,7 @@ int main(int argc, char* argv[]){
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
 	glutCreateWindow("mirror");
-	glutReshapeWindow(800, 600);
+	glutReshapeWindow(768, 768);
 	glutPositionWindow(50, 50);
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_NORMALIZE);

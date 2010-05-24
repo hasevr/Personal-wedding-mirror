@@ -82,7 +82,6 @@ void Decal::Draw(){
 	glPushMatrix();
 	glMultMatrixd(posture);
 	glBindTexture(GL_TEXTURE_2D, id);
-	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST );
 	glEnable(GL_TEXTURE_2D);
 	glColor4dv(color);
 	glBegin(GL_TRIANGLE_STRIP);
@@ -109,6 +108,9 @@ bool Decal::Load(){
 	int tx = LoadBmpGetWidth(h);
 	int ty = LoadBmpGetHeight(h);
 	int nc = LoadBmpGetBytePerPixel(h);
+//	int hasAlpha = LoadBmpHasAlpha(h);
+	std::string ext = fileName.substr(fileName.length()-3);
+	int hasAlpha = ext.compare("png") == 0 || ext.compare("PNG") == 0;
 	char* texbuf = DBG_NEW char[tx*ty*nc];
 	imageSize = Vec2d(tx, ty);
 	sheetSize.x = sheetSize.y/ty*tx;
@@ -119,7 +121,7 @@ bool Decal::Load(){
 	glBindTexture( GL_TEXTURE_2D, id );
 	glPixelStorei( GL_UNPACK_ALIGNMENT, 1 );
 	const GLenum	pxfm[] = {GL_LUMINANCE, GL_LUMINANCE_ALPHA, GL_BGR_EXT, GL_BGRA_EXT};
-	int rv = gluBuild2DMipmaps(GL_TEXTURE_2D, (nc==1||nc==3) ? GL_RGB : GL_RGBA, tx, ty, pxfm[nc - 1], GL_UNSIGNED_BYTE, texbuf);
+	int rv = gluBuild2DMipmaps(GL_TEXTURE_2D, (hasAlpha) ? GL_RGBA : GL_RGB, tx, ty, pxfm[nc - 1], GL_UNSIGNED_BYTE, texbuf);
 	delete texbuf;
 	if (rv){
 		DSTR << gluErrorString(rv) << std::endl;
