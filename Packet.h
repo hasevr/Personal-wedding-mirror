@@ -14,7 +14,7 @@ struct PMediaTypeAndLen{
 };
 
 struct PMediaData{
-	enum DataLen{DATALEN=1024 + 256};
+	enum DataLen{DATALEN=1000};
 	char packetId[2];
 	short count;
 	unsigned char data[DATALEN];

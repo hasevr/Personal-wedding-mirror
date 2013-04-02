@@ -1,5 +1,5 @@
 #include <dshow.h>
-#include <qedit.h>
+#include "qedit.h"
 #include <vector>
 
 

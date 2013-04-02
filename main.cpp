@@ -281,6 +281,13 @@ int main(int argc, char* argv[]){
 
 	env.Init();
 	contents.Init();
+	//	‹N“®‚©‚çƒJƒƒ‰•\¦‚É‚·‚é‚½‚ß‚Ì×H
+	fullScreen();
+	env.cameraMode = Env::CM_TILE;
+	env.InitCamera();
+	contents.mode = Contents::CO_CAM;
+	contents.Draw();
+
 
 	glutMainLoop();
 }

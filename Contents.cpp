@@ -265,7 +265,7 @@ void Contents::Draw(bool isInit){
 }
 
 void Contents::Init(){
-	mode = CO_BLACK;
+	mode = CO_CAM;
 	//	FairyÇÃê∂ê¨
 	for(int i=0; i<100; ++i){
 		fairies.push_back(Fairy());
@@ -356,8 +356,8 @@ void Contents::Capture(unsigned char* src, unsigned len){
 				<< " = 400*" << len/400 << 
 				" = 768*" << len/768 << std::endl;
 		}
-		w = min(wIn, (int)CVTEX_SIZE);
-		h = min(hIn, (int)CVTEX_SIZE);
+		w = std::min(wIn, (int)CVTEX_SIZE);
+		h = std::min(hIn, (int)CVTEX_SIZE);
 		double tx = (double)w/CVTEX_SIZE;
 		double ty =(double)h/CVTEX_SIZE;
 		cvTexCoord[3] = Vec2d(0, ty);

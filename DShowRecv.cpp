@@ -3,7 +3,7 @@
 #include "DShowRecv.h"
 #include "Packet.h"
 #include <dshow.h>
-#include <qedit.h>
+#include "qedit.h"
 #include <windows.h>
 #pragma comment(lib, "strmiids.lib")
 

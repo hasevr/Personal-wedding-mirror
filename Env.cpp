@@ -44,7 +44,7 @@ void Env::InitSupport(){
 	for(int y=0; y<DIVY; ++y){
 		for(int x=0; x<DIVX; ++x){
 			for(int i=0; i<4;++i){
-				support.yMin = min(cell[y][x].mirror.vertex[i].y , support.yMin);
+				support.yMin = std::min(cell[y][x].mirror.vertex[i].y , support.yMin);
 			}
 		}
 	}
@@ -259,7 +259,7 @@ void Env::WritePs(){
 void Env::Init(){
 	bZoomMirror = false;
 	dt = 1.0 / 60;
-	drawMode = DM_DESIGN;
+	drawMode = DM_FRONT;
 	front.Init();
 	config.Init();
 //	projPose.Pos() = Vec3d(0, 0, -config.outY[1]+1.2);
@@ -268,9 +268,9 @@ void Env::Init(){
 	InitMirror();
 	InitCamera();
 	InitSupport();
-	PlaceMirror();
-	PlaceSupport();
-	WritePs();
+//	PlaceMirror();
+//	PlaceSupport();
+//	WritePs();
 	InitGL();
 }
 

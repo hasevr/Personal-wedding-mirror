@@ -175,8 +175,8 @@ Vec3d Fairy::NewGoal(){
 //	if (abs(goal.y) < 16) goal.y *= 2;
 	Vec3d rv = goal + 0.5*Vec3d(area.x*randd(), area.y*randd(), area.z*randd());
 	for(int i=0; i<3; ++i){
-		rv[i] = max(rv[i], offset[i]-area[i]);
-		rv[i] = min(rv[i], offset[i]+area[i]);
+		rv[i] = std::max(rv[i], offset[i]-area[i]);
+		rv[i] = std::min(rv[i], offset[i]+area[i]);
 	}
 	return rv;
 }
